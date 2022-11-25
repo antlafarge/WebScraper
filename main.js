@@ -74,7 +74,7 @@ async function scrap({ url, extensionsRE, minSize, deep, delay, baseUrl })
             console.error("Fetch failed:", url, ex);
             response = null;
             retryCount--;
-            if (retryCount == 0)
+            if (retryCount === 0)
             {
                 scrapNext(delay);
                 return;
@@ -108,7 +108,7 @@ async function scrap({ url, extensionsRE, minSize, deep, delay, baseUrl })
     
             for (const data of datas)
             {
-                if (data.ext == "html")
+                if (data && data.ext === "html")
                 {
                     const newUrl = getUrl(data.url, url);
                     if (canScrap(newUrl))
@@ -188,10 +188,10 @@ function getUrl(url, pageUrl, baseUrl)
 
 async function downloadFile(fileUrl, extensionsRE, minSize)
 {
+    let ext = null;
+
     try
     {
-        let ext = null;
-
         if (!fileUrl.startsWith(url))
         {
             return { url: fileUrl, ext };
@@ -241,12 +241,12 @@ async function downloadFile(fileUrl, extensionsRE, minSize)
         const response = await fetch(fileUrl);
         const buffer = await response.arrayBuffer();
         fs.writeFile(filePath, new DataView(buffer), () => {});
-        return { url: fileUrl, ext };
     }
     catch (ex)
     {
         console.error("Download failed", fileUrl, ex);
     }
+    return { url: fileUrl, ext };
 }
 
 function urlToPath(url)
