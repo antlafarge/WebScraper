@@ -32,6 +32,7 @@ const seenUrls = {}
 const urls = [];
 let scrapCount = 0;
 let totalCount = 0;
+let downloadCount = 0;
 
 const extensionsRE = new RegExp((extensions === "*" ? "" : extensions));
 
@@ -112,7 +113,7 @@ function scrapNext(delay)
         }
         else
         {
-            console.log(`[${(new Date()).toISOString()}] Completed`);
+            console.log(`[${(new Date()).toISOString()}] Completed [${downloadCount} files downloaded on ${totalCount} pages parsed]`);
         }
     }, delay);
 }
@@ -208,7 +209,7 @@ async function downloadFile(fileUrl, extensionsRE, minSize)
 
         createOutputDirs(filePath);
 
-        console.log(`[${(new Date()).toISOString()}] \tDownload "${fileUrl}"`);
+        console.log(`[${(new Date()).toISOString()}] \tDownload [${++downloadCount}] "${fileUrl}"`);
         const response = await fetch(fileUrl);
         const buffer = await response.arrayBuffer();
         fs.writeFile(filePath, new DataView(buffer), () => {});
@@ -232,7 +233,7 @@ function createOutputDirs(filePath)
     const dirPath = dirs.join('/');
     if (!fs.existsSync(dirPath))
     {
-        console.log(`[${(new Date()).toISOString()}] \tmkdir`, dirPath);
+        console.log(`[${(new Date()).toISOString()}] \tmkdir "${dirPath}"`);
         fs.mkdirSync(dirPath, { recursive: true });
     }
 }
