@@ -4,18 +4,12 @@
 // - url : Starting url
 // - extensions : File extentions to download (default: "*") (example: "jpg|jpeg|png|gif" for pictures)
 // - minSize : Minimal file size to download (in bytes) (default: 0) (example: 1024000 for 1MB)
-// - deep : How many html pages to browse from starting url (default: 0) (example: 2 to recurse 2 times)
-// - delay : Delay between each page scrap (in milliseconds) (default: 5000) (example: 5000 to 5000 ms (5 seconds))
+// - deep : Recursive scap count from starting url (default: 0)
+// - delay : Delay between each page scrap (in milliseconds) (default: 500)
 
 import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
 import * as fs from 'fs';
-import * as path from 'path';
-import * as urlParser from 'url'
-import { imageSize } from 'image-size';
-import { performance } from 'perf_hooks';
-
-console.log(process.argv);
 
 var args = process.argv.slice(2);
 
@@ -23,7 +17,7 @@ const url = args[0];
 const extensions = (args[1] ?? "*");
 const minSize = parseInt(args[2] ?? 0);
 const deep = parseInt(args[3] ?? 0);
-const delay = parseInt(args[4] ?? 5000);
+const delay = parseInt(args[4] ?? 500);
 
 console.log("Settings:", { url, extensions, minSize, deep, delay });
 
@@ -39,15 +33,13 @@ const urls = [];
 let scrapCount = 0;
 let totalCount = 0;
 
-let lastTime = performance.now();
-
 const extensionsRE = new RegExp((extensions === "*" ? "" : extensions));
 
 scrap({ url, extensionsRE, minSize, deep, delay, baseUrl });
 
 async function scrap({ url, extensionsRE, minSize, deep, delay, baseUrl })
 {
-    console.log(`Scrap [${++scrapCount}/${totalCount}|${urls.length}|${deep}] "${url}"`);
+    console.log(`[${(new Date()).toISOString()}] Scrap [${++scrapCount}/${totalCount}|${urls.length}|${deep}] "${url}"`);
 
     seenUrls[url] = true;
 
@@ -71,7 +63,7 @@ async function scrap({ url, extensionsRE, minSize, deep, delay, baseUrl })
         }
         catch (ex)
         {
-            console.error("Fetch failed:", url, ex);
+            console.error(`[${(new Date()).toISOString()}] Fetch failed:`, url, ex);
             response = null;
             retryCount--;
             if (retryCount === 0)
@@ -98,7 +90,7 @@ async function scrap({ url, extensionsRE, minSize, deep, delay, baseUrl })
 
         const data = await downloadFile(newUrl, extensionsRE, minSize);
         
-        if (deep > 0 && data && data.ext === "html" && canScrap(newUrl))
+        if (deep > 0 && data && data.ext === "html" && canScrap(newUrl, url))
         {
             urls.push({ url: newUrl, extensionsRE, minSize, deep: (deep - 1), delay, baseUrl });
             totalCount++;
@@ -120,14 +112,14 @@ function scrapNext(delay)
         }
         else
         {
-            console.log("Completed");
+            console.log(`[${(new Date()).toISOString()}] Completed`);
         }
     }, delay);
 }
 
-function canScrap(url2)
+function canScrap(url, pageUrl)
 {
-    return (url2.includes(url) && seenUrls[url2] === undefined);
+    return (url.startsWith(pageUrl) && seenUrls[url] === undefined);
 }
 
 function sleep(ms)
@@ -179,22 +171,20 @@ async function downloadFile(fileUrl, extensionsRE, minSize)
 
     try
     {
+        const extTmp = fileUrl.split('?')[0].split('.').pop();
+        ext = (extTmp && extTmp.length <= 4) ? extTmp : null;
+
         if (!fileUrl.startsWith(url))
         {
             return { url: fileUrl, ext };
         }
 
-        //fileUrl = fileUrl.split('?')[0];
-
         let filePath = urlToPath(fileUrl);
 
         const headers = await fetch(fileUrl, { method:'HEAD' });
 
-        const extTmp = fileUrl.split('?')[0].split('.').pop();
-        ext = (extTmp && extTmp.length <= 4) ? extTmp : null;
-
         const contentType = headers.headers.get('Content-Type');
-        if (contentType.includes("text/html"))
+        if (contentType.includes("text/html") && ext !== "htm" && ext !== "html")
         {
             ext = "html";
             filePath += ("." + ext)
@@ -216,22 +206,16 @@ async function downloadFile(fileUrl, extensionsRE, minSize)
             return { url: fileUrl, ext };
         }
 
-        // const imgSize = await imageSize(buffer);
-        // if (imgSize == null || imgSize.width < 100 || imgSize.height < 100)
-        // {
-        //     return ext;
-        // }
-
         createOutputDirs(filePath);
 
-        console.log(`\tDownload "${fileUrl}"`);
+        console.log(`[${(new Date()).toISOString()}] \tDownload "${fileUrl}"`);
         const response = await fetch(fileUrl);
         const buffer = await response.arrayBuffer();
         fs.writeFile(filePath, new DataView(buffer), () => {});
     }
     catch (ex)
     {
-        console.error("Download failed", fileUrl, ex);
+        console.error(`[${(new Date()).toISOString()}] Download failed`, fileUrl, ex);
     }
     return { url: fileUrl, ext };
 }
@@ -245,21 +229,10 @@ function createOutputDirs(filePath)
 {
     const dirs = filePath.split('/');
     dirs.pop();
-    let path = "";
-    for (const dir of dirs)
+    const dirPath = dirs.join('/');
+    if (!fs.existsSync(dirPath))
     {
-        if (dir.length > 0)
-        {
-            if (path.length > 0)
-            {
-                path += "/";
-            }
-            path += dir;
-            if (!fs.existsSync(path))
-            {
-                console.log("\tmkdir", path);
-                fs.mkdirSync(path);
-            }
-        }
+        console.log(`[${(new Date()).toISOString()}] \tmkdir`, dirPath);
+        fs.mkdirSync(dirPath, { recursive: true });
     }
 }
