@@ -13,6 +13,13 @@ node main.js "http://www.example.com/" "jpg|jpeg" 100 1 200
 ```
 *Download from [http://www.example.com/](http://www.example.com/) every \*.jpg or \*.jpeg image files more than 100 bytes 1 by 1 each 200 milliseconds, and recurse on all links 1 time*
 
+Log format
+```
+[2022-11-25T11:35:08.690Z] Scrap [12/14|3|1] "http://www.example.com/"
+                                  ^^ ^^ ^ ^
+```
+[`Date`] Scrap [`12th` / `14` | `3 to parse` | `recurse 1 time` ] "`Current page url`"
+
 # Install Node.js
 
 ## Windows
