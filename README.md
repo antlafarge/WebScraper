@@ -1,6 +1,8 @@
 WebScraper
 ==========
 
+Check for links in html links tags (href attribute in `<a href=".."></a>`) and images tags (src attribute in `<img src=".." />`).
+
 ```
 node main.js "<url>" "<extensions>" <minSize> <deep> <delay>
 ```
