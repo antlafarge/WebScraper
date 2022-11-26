@@ -92,35 +92,22 @@ async function scrap({ url, extensionsRE, minSize, deep, delay, baseUrl })
     
     const fileUrls = imageUrls.concat(linkUrls);
 
-    const allDownloadPromises = [];
-
     for (const fileUrl of fileUrls)
     {
-        const fileUrl2 = getUrl(fileUrl, url, baseUrl);
-        allDownloadPromises.push(downloadFile(fileUrl2, extensionsRE, minSize));
-    }
+        const newUrl = getUrl(fileUrl, url, baseUrl);
 
-    Promise.all(allDownloadPromises).then((datas) =>
-    {
-        if (deep > 0)
+        const data = await downloadFile(newUrl, extensionsRE, minSize);
+        
+        if (deep > 0 && data && data.ext === "html" && canScrap(newUrl))
         {
-            deep--;
-    
-            for (const data of datas)
-            {
-                if (data && data.ext === "html")
-                {
-                    const newUrl = getUrl(data.url, url);
-                    if (canScrap(newUrl))
-                    {
-                        urls.push({ url: newUrl, extensionsRE, minSize, deep, delay, baseUrl });
-                        totalCount++;
-                    }
-                }
-            }
+            urls.push({ url: newUrl, extensionsRE, minSize, deep: (deep - 1), delay, baseUrl });
+            totalCount++;
         }
-        scrapNext(delay);
-    });
+
+        await sleep(delay);
+    }
+    
+    scrapNext(delay);
 }
 
 function scrapNext(delay)
