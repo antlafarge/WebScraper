@@ -1,15 +1,24 @@
 WebScraper
 ==========
 
+Check for links in html links tags (href attribute in `<a href=".."></a>`) and images tags (src attribute in `<img src=".." />`).
+
 ```
 node main.js "<url>" "<extensions>" <minSize> <deep> <delay>
 ```
 
 Example
 ```
-node main.js "http://www.example.com/" "jpg|jpeg" 100 1 5000
+node main.js "http://www.example.com/" "jpg|jpeg" 100 1 200
 ```
-*Download from [http://www.example.com/](http://www.example.com/) every \*.jpg or \*.jpeg image files more than 100 bytes, and recurse on all links 1 time each 5000 milliseconds*
+*Download from [http://www.example.com/](http://www.example.com/) every \*.jpg or \*.jpeg image files more than 100 bytes 1 by 1 each 200 milliseconds, and recurse on all links 1 time*
+
+Log format
+```
+[2022-11-25T11:35:08.690Z] Scrap [12/14|3|1] "http://www.example.com/"
+                                  ^^ ^^ ^ ^
+```
+[`Date`] Scrap [`12th` / `14` | `3 to parse` | `recurse 1 time` ] "`Current page url`"
 
 # Install Node.js
 
@@ -27,7 +36,7 @@ sudo apt update && sudo apt install -y nodejs npm
 
 ```
 docker build --rm -t webscraper .
-docker run -d --rm -v "$PWD/downloads/":/usr/src/app/downloads/ --name wsp webscraper "http://www.example.com/" "*" 0 0 5000
+docker run -d --rm -v "$PWD/downloads/":/usr/src/app/downloads/ --name wsp webscraper "http://www.example.com/" "*" 0 0 200
 ```
 *Omit the `--rm` option to follow the logs by using `docker logs --follow wsp`*
 
