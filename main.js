@@ -108,7 +108,7 @@ function scrapNext(delay)
     {
         if (urls.length > 0)
         {
-            scrap(urls.pop());
+            scrap(urls.shift());
         }
         else
         {
