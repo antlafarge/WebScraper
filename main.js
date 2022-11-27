@@ -36,8 +36,8 @@ let scrapCount = 0;
 let totalCount = 1;
 let downloadCount = 0;
 
-const downloadExtensionsRE = new RegExp((downloadExtensions === "*" ? "" : downloadExtensions));
-const excludeExtensionsRE = new RegExp((excludeExtensions === "null" ? "a^" : excludeExtensions));
+const downloadExtensionsRE = new RegExp((downloadExtensions === "*" ? "" : `^(${downloadExtensions})$`));
+const excludeExtensionsRE = new RegExp((excludeExtensions === "null" ? "a^" : `^(${excludeExtensions})$`));
 
 scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, deep, delay, baseUrl });
 
