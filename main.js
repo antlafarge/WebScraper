@@ -31,7 +31,7 @@ if (typeof(url) !== 'string' || !url.includes('http'))
 const seenUrls = {}
 const urls = [];
 let scrapCount = 0;
-let totalCount = 0;
+let totalCount = 1;
 let downloadCount = 0;
 
 const extensionsRE = new RegExp((extensions === "*" ? "" : extensions));
