@@ -37,7 +37,7 @@ let totalCount = 1;
 let downloadCount = 0;
 
 const downloadExtensionsRE = new RegExp((downloadExtensions === "*" ? "" : downloadExtensions));
-const excludeExtensionsRE = new RegExp((excludeExtensions === "null" ? "" : excludeExtensions));
+const excludeExtensionsRE = new RegExp((excludeExtensions === "null" ? "a^" : excludeExtensions));
 
 scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, deep, delay, baseUrl });
 
@@ -176,7 +176,7 @@ async function downloadFile(fileUrl, downloadExtensionsRE, excludeExtensionsRE, 
     try
     {
         const extTmp = fileUrl.split('?')[0].split('.').pop();
-        ext = (extTmp && extTmp.length <= 4) ? extTmp : null;
+        ext = (/[a-zA-Z0-9]+/.test(extTmp) ? extTmp : null);
 
         if (!fileUrl.startsWith(url))
         {
@@ -198,8 +198,6 @@ async function downloadFile(fileUrl, downloadExtensionsRE, excludeExtensionsRE, 
         {
             return { url: fileUrl, ext };
         }
-
-        console.log("PASSED!", downloadExtensionsRE, ext, downloadExtensionsRE.test(ext));
 
         const contentLength = headers.headers.get('Content-Length');
         if (contentLength < minSize)
