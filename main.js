@@ -1,8 +1,9 @@
 // Script which download recursively many resources from websites
-// Usage : main.js "<url>" "<extensions>" <minSize> <deep> <delay>
+// Usage : main.js "<url>" "<downloadExtensions>" "<excludeExtensions>" <minSize> <deep> <delay>
 // Parameters :
 // - url : Starting url
-// - extensions : File extentions to download (default: "*") (example: "jpg|jpeg|png|gif" for pictures)
+// - downloadExtensions : File extentions to download (default: "*") (example: "jpg|jpeg|png|gif" for pictures)
+// - excludeExtensions : File extentions to download (default: "*") (example: "jpg|jpeg|png|gif" for pictures)
 // - minSize : Minimal file size to download (in bytes) (default: 0) (example: 1024000 for 1MB)
 // - deep : Recursive scap count from starting url (default: 0)
 // - delay : Delay between each page scrap (in milliseconds) (default: 500)
@@ -14,12 +15,13 @@ import * as fs from 'fs';
 var args = process.argv.slice(2);
 
 const url = args[0];
-const extensions = (args[1] ?? "*");
-const minSize = parseInt(args[2] ?? 0);
-const deep = parseInt(args[3] ?? 0);
-const delay = parseInt(args[4] ?? 500);
+const downloadExtensions = (args[1] ?? "*");
+const excludeExtensions = (args[2] ?? "*");
+const minSize = parseInt(args[3] ?? 0);
+const deep = parseInt(args[4] ?? 0);
+const delay = parseInt(args[5] ?? 500);
 
-console.log("Settings:", { url, extensions, minSize, deep, delay });
+console.log("Settings:", { url, downloadExtensions, excludeExtensions, minSize, deep, delay });
 
 const baseUrl = url.match(/^(https?:\/\/.+?\..+?)((\/|\?).*)?$/)[1];
 
@@ -34,11 +36,12 @@ let scrapCount = 0;
 let totalCount = 1;
 let downloadCount = 0;
 
-const extensionsRE = new RegExp((extensions === "*" ? "" : extensions));
+const downloadExtensionsRE = new RegExp((downloadExtensions === "*" ? "" : downloadExtensions));
+const excludeExtensionsRE = new RegExp((excludeExtensions === "*" ? "" : excludeExtensions));
 
-scrap({ url, extensionsRE, minSize, deep, delay, baseUrl });
+scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, deep, delay, baseUrl });
 
-async function scrap({ url, extensionsRE, minSize, deep, delay, baseUrl })
+async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, deep, delay, baseUrl })
 {
     console.log(`[${(new Date()).toISOString()}] Scrap [${++scrapCount}/${totalCount}|${urls.length}|${deep}] "${url}"`);
 
@@ -89,11 +92,11 @@ async function scrap({ url, extensionsRE, minSize, deep, delay, baseUrl })
     {
         const newUrl = getUrl(fileUrl, url, baseUrl);
 
-        const data = await downloadFile(newUrl, extensionsRE, minSize);
+        const data = await downloadFile(newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize);
         
         if (deep > 0 && data && data.ext === "html" && canScrap(newUrl, url))
         {
-            urls.push({ url: newUrl, extensionsRE, minSize, deep: (deep - 1), delay, baseUrl });
+            urls.push({ url: newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, deep: (deep - 1), delay, baseUrl });
             totalCount++;
         }
 
@@ -166,7 +169,7 @@ function getUrl(url, pageUrl, baseUrl)
     return finalUrl;
 }
 
-async function downloadFile(fileUrl, extensionsRE, minSize)
+async function downloadFile(fileUrl, downloadExtensionsRE, excludeExtensionsRE, minSize)
 {
     let ext = null;
 
@@ -191,10 +194,12 @@ async function downloadFile(fileUrl, extensionsRE, minSize)
             filePath += ("." + ext)
         }
 
-        if (!extensionsRE.test(ext))
+        if (!downloadExtensionsRE.test(ext) || excludeExtensionsRE.test(ext))
         {
             return { url: fileUrl, ext };
         }
+
+        console.log("PASSED!", downloadExtensionsRE, ext, downloadExtensionsRE.test(ext));
 
         const contentLength = headers.headers.get('Content-Length');
         if (contentLength < minSize)
