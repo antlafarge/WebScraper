@@ -113,7 +113,7 @@ function scrapNext(delay)
         }
         else
         {
-            console.log(`[${(new Date()).toISOString()}] Completed [${downloadCount} files downloaded on ${totalCount} pages parsed]`);
+            console.log(`[${(new Date()).toISOString()}] Completed [${downloadCount} files downloaded by parsing ${totalCount} pages]`);
         }
     }, delay);
 }
