@@ -11,7 +11,7 @@
   "license": "ISC",
   "type": "module",
   "engines": {
-    "node": "16.12.0"
+    "node": "19.1.0"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",
