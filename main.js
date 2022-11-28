@@ -90,17 +90,20 @@ async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, 
 
     for (const fileUrl of fileUrls)
     {
-        const newUrl = getUrl(fileUrl, url, baseUrl);
-
-        const data = await downloadFile(newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize);
-        
-        if (deep > 0 && data && data.ext === "html" && canScrap(newUrl, url))
+        if (fileUrl != null && fileUrl.length > 0)
         {
-            urls.push({ url: newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, deep: (deep - 1), delay, baseUrl });
-            totalCount++;
-        }
+            const newUrl = getUrl(fileUrl, url, baseUrl);
 
-        await sleep(delay);
+            const data = await downloadFile(newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize);
+
+            if (deep > 0 && data && data.ext === "html" && canScrap(newUrl, url))
+            {
+                urls.push({ url: newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, deep: (deep - 1), delay, baseUrl });
+                totalCount++;
+            }
+
+            await sleep(delay);
+        }
     }
     
     scrapNext(delay);
@@ -133,6 +136,10 @@ function sleep(ms)
 
 function getUrl(url, pageUrl, baseUrl)
 {
+    if (url.includes('#'))
+    {
+        url = url.split('#')[0];
+    }
     let finalUrl;
     if (url.startsWith('http'))
     {
