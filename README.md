@@ -4,12 +4,12 @@ WebScraper
 Check for links in html links tags (href attribute in `<a href=".."></a>`) and images tags (src attribute in `<img src=".." />`) and download files (to ./downloads/ folder) which match required filters.
 
 ```
-node main.js "<url>" "<downloadExtensions>" "<excludeExtensions>" <minSize> <deep> <delay>
+node main.js "<url>" "<downloadExtensions>" "<excludeExtensions>" <minSize> <deep> <delay> "<allowOutside>"
 ```
 
 Example
 ```
-node main.js "http://www.example.com/" "jpg|jpeg" "jpg2" 100 1 200
+node main.js "http://www.example.com/" "jpg|jpeg" "jpg2" 100 1 200 "false"
 ```
 *Download from [http://www.example.com/](http://www.example.com/) every \*.jpg or \*.jpeg image files more than 100 bytes, exclude \*.jpg2 files, and recurse on all links 1 time  each 200 milliseconds*
 
