@@ -1,5 +1,5 @@
 // Script which download recursively many resources from websites
-// Usage : main.js "<url>" "<downloadExtensions>" "<excludeExtensions>" <minSize> <deep> <delay>
+// Usage : main.js "<url>" "<downloadExtensions>" "<excludeExtensions>" <minSize> <deep> <delay> <allowOutsideDownloads> <allowOutsideScraping>
 // Parameters :
 // - url : Starting url
 // - downloadExtensions : File extentions to download (default: "*") (example: "jpg|jpeg|png|gif" for pictures)
@@ -7,6 +7,8 @@
 // - minSize : Minimal file size to download (in bytes) (default: 0) (example: 1024000 for 1MB)
 // - deep : Recursive scap count from starting url (default: 0)
 // - delay : Delay between each page scrap (in milliseconds) (default: 500)
+// - allowOutsideDownloads : Allow to downloads files outside the original source website (default: "false")
+// - allowOutsideScraping : Allow to scrap files outside the original source website (default: "false")
 
 import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
@@ -20,6 +22,8 @@ const excludeExtensions = (args[2] ?? "*");
 const minSize = parseInt(args[3] ?? 0);
 const deep = parseInt(args[4] ?? 0);
 const delay = parseInt(args[5] ?? 500);
+const allowOutsideDownloads = (args[6] == "true");
+const allowOutsideScraping = (args[7] == "true");
 
 console.log("Settings:", { url, downloadExtensions, excludeExtensions, minSize, deep, delay });
 
@@ -39,9 +43,9 @@ let downloadCount = 0;
 const downloadExtensionsRE = new RegExp((downloadExtensions === "*" ? "" : `^(${downloadExtensions})$`));
 const excludeExtensionsRE = new RegExp((excludeExtensions === "null" ? "a^" : `^(${excludeExtensions})$`));
 
-scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, deep, delay, baseUrl });
+scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, deep, delay, baseUrl, allowOutsideDownloads, allowOutsideScraping });
 
-async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, deep, delay, baseUrl })
+async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, deep, delay, baseUrl, allowOutsideDownloads, allowOutsideScraping })
 {
     console.log(`[${(new Date()).toISOString()}] Scrap [${++scrapCount}/${totalCount}|${urls.length}|${deep}] "${url}"`);
 
@@ -61,7 +65,7 @@ async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, 
                 scrapNext(delay);
                 return;
             }
-            
+
             // Fetch html file
             response = await fetch(url);
         }
@@ -85,7 +89,7 @@ async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, 
 
     const imageUrls = $('img').map((i, img) => img.attribs.src).get();
     const linkUrls = $('a').map((i, link) => link.attribs.href).get();
-    
+
     const fileUrls = imageUrls.concat(linkUrls);
 
     for (const fileUrl of fileUrls)
@@ -94,18 +98,18 @@ async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, 
         {
             const newUrl = getUrl(fileUrl, url, baseUrl);
 
-            const data = await downloadFile(newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize);
+            const data = await downloadFile(newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize; allowOutsideDownloads);
 
-            if (deep > 0 && data && data.ext === "html" && canScrap(newUrl, url))
+            if (deep > 0 && data && data.ext === "html" && canScrap(newUrl, url, allowOutsideScraping))
             {
-                urls.push({ url: newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, deep: (deep - 1), delay, baseUrl });
+                urls.push({ url: newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, deep: (deep - 1), delay, baseUrl, allowOutsideDownloads, allowOutsideScraping });
                 totalCount++;
             }
 
             await sleep(delay);
         }
     }
-    
+
     scrapNext(delay);
 }
 
@@ -124,9 +128,9 @@ function scrapNext(delay)
     }, delay);
 }
 
-function canScrap(url, pageUrl)
+function canScrap(url, pageUrl, allowOutsideScraping)
 {
-    return (url.startsWith(pageUrl) && seenUrls[url] === undefined);
+    return (seenUrls[url] === undefined && (allowOutsideScraping || url.startsWith(pageUrl)));
 }
 
 function sleep(ms)
@@ -176,7 +180,7 @@ function getUrl(url, pageUrl, baseUrl)
     return finalUrl;
 }
 
-async function downloadFile(fileUrl, downloadExtensionsRE, excludeExtensionsRE, minSize)
+async function downloadFile(fileUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, allowOutsideDownloads)
 {
     let ext = null;
 
@@ -185,7 +189,7 @@ async function downloadFile(fileUrl, downloadExtensionsRE, excludeExtensionsRE, 
         const extTmp = fileUrl.split('?')[0].split('.').pop();
         ext = (/[a-zA-Z0-9]+/.test(extTmp) ? extTmp : null);
 
-        if (!fileUrl.startsWith(url))
+        if (allowOutsideDownloads && !fileUrl.startsWith(url))
         {
             return { url: fileUrl, ext };
         }
@@ -211,7 +215,7 @@ async function downloadFile(fileUrl, downloadExtensionsRE, excludeExtensionsRE, 
         {
             return { url: fileUrl, ext };
         }
-        
+
         if (fs.existsSync(filePath))
         {
             return { url: fileUrl, ext };
