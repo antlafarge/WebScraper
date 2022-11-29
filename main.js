@@ -1,5 +1,5 @@
 // Script which download recursively many resources from websites
-// Usage : main.js "<url>" "<downloadExtensions>" "<excludeExtensions>" <minSize> <deep> <delay> <allowOutsideDownloads> <allowOutsideScraping>
+// Usage : main.js "<url>" "<downloadExtensions>" "<excludeExtensions>" <minSize> <deep> <delay> "<allowOutsideDownloads>" "<allowOutsideScraping>"
 // Parameters :
 // - url : Starting url
 // - downloadExtensions : File extentions to download (default: "*") (example: "jpg|jpeg|png|gif" for pictures)
