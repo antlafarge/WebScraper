@@ -100,7 +100,7 @@ async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, 
 
             if (deep > 0 && data && data.ext === "html" && canScrap(newUrl, url, allowOutside))
             {
-                urls.push({ url: newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, deep: (deep - 1), delay, baseUrl, allowOutsideDownloads, allowOutsideScraping });
+                urls.push({ url: newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, deep: (deep - 1), delay, baseUrl, allowOutside });
                 totalCount++;
             }
 
