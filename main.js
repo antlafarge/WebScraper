@@ -7,7 +7,7 @@
 // - minSize : Minimal file size to download (in bytes) (default: 0) (example: 1024000 for 1MB)
 // - deep : Recursive scap count from starting url (default: 0)
 // - delay : Delay between each page scrap (in milliseconds) (default: 500)
-// - allowOutside : Allow the scraper to parse or downloads files outside the original source (default: "false")
+// - allowOutside : Allow the scraper to parse or download files outside the original source (default: "false")
 
 import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
