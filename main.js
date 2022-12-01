@@ -96,9 +96,9 @@ async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, 
         {
             const newUrl = getUrl(fileUrl, url, baseUrl);
 
-            const data = await downloadFile(newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize; allowOutside);
+            const data = await downloadFile(newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, allowOutside);
 
-            if (deep > 0 && data && data.ext === "html" && canScrap(newUrl, url, allowOutside))
+            if (deep > 0 && data && data.ext === "html" && canScrap(newUrl, baseUrl, allowOutside))
             {
                 urls.push({ url: newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, deep: (deep - 1), delay, baseUrl, allowOutside });
                 totalCount++;
@@ -126,9 +126,9 @@ function scrapNext(delay)
     }, delay);
 }
 
-function canScrap(url, pageUrl, allowOutside)
+function canScrap(url, baseUrl, allowOutside)
 {
-    return (seenUrls[url] === undefined && (allowOutside || url.startsWith(pageUrl)));
+    return (seenUrls[url] === undefined && (allowOutside || url.startsWith(baseUrl)));
 }
 
 function sleep(ms)
