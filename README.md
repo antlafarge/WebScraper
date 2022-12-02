@@ -1,7 +1,12 @@
 WebScraper
 ==========
 
-Check for links in html links tags (href attribute in `<a href=".."></a>`), images tags (src attribute in `<img src=".." />`) and video/source tags (src attribute in `<video src=".."></video>` or `<source src=".." />`); and download files (to ./downloads/ folder) which match required filters.
+Check for links in html and download files (to ./downloads/ folder) which match required filters.  
+The scraper will search for links in these html tags :
+- `<a href=".."></a>`
+- `<img src=".." />`
+- `<video src=".."></video>`
+- `<source src=".." />`
 
 ```
 node main.js "<url>" "<downloadExtensions>" "<excludeExtensions>" <minSize> <deep> <delay> "<allowOutside>"

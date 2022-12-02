@@ -87,9 +87,10 @@ async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, 
 
     const imageUrls = $('img').map((i, img) => img.attribs.src).get();
     const linkUrls = $('a').map((i, link) => link.attribs.href).get();
-    const videoUrls = $('source').map((i, source) => source.attribs.src).get();
+    const videoUrls = $('video').map((i, video) => video.attribs.src).get();
+    const sourceUrls = $('source').map((i, source) => source.attribs.src).get();
 
-    const fileUrls = imageUrls.concat(linkUrls).concat(videoUrls);
+    const fileUrls = imageUrls.concat(linkUrls).concat(videoUrls).concat(sourceUrls);
 
     for (const fileUrl of fileUrls)
     {
