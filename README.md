@@ -53,6 +53,12 @@ docker run -it --rm --name mynode -v "$PWD":/usr/src/app -w /usr/src/app mynode 
 ```
 *Note: `$PWD` targets to current directory, so be sure your current directory is the project directory.*
 
+# Test Node.js is working
+
+```
+node --version
+```
+
 # Update node packages manager
 
 ```
@@ -71,18 +77,14 @@ cd /WebScraper
 npm install
 ```
 
-# Node.js is ready !
-
-```
-node --version
-```
+You are ready !
 
 ## Node.js commands reminder
 
 ```
 npm isntall -g npm
 npm init -y
-npm install --save cheerio image-size jsdom node-fetch
+npm install --save cheerio node-fetch
 npm install --save
 node script.js
 ```

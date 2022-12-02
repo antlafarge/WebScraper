@@ -87,8 +87,9 @@ async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, 
 
     const imageUrls = $('img').map((i, img) => img.attribs.src).get();
     const linkUrls = $('a').map((i, link) => link.attribs.href).get();
+    const videoUrls = $('source').map((i, source) => source.attribs.src).get();
 
-    const fileUrls = imageUrls.concat(linkUrls);
+    const fileUrls = imageUrls.concat(linkUrls).concat(videoUrls);
 
     for (const fileUrl of fileUrls)
     {
@@ -98,7 +99,7 @@ async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, 
 
             const data = await downloadFile(newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, allowOutside);
 
-            if (deep > 0 && data && data.ext === "html" && canScrap(newUrl, baseUrl, allowOutside))
+            if (deep > 0 && data && (data.ext.startsWith("htm") || data.ext.startsWith("php")) && canScrap(newUrl, baseUrl, allowOutside))
             {
                 urls.push({ url: newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, deep: (deep - 1), delay, baseUrl, allowOutside });
                 totalCount++;
@@ -184,32 +185,41 @@ async function downloadFile(fileUrl, downloadExtensionsRE, excludeExtensionsRE, 
 
     try
     {
-        const extTmp = fileUrl.split('?')[0].split('.').pop();
-        ext = (/[a-zA-Z0-9]+/.test(extTmp) ? extTmp : null);
+        const extTmp = fileUrl.match(/^https?:\/\/.+\/.+\.([a-zA-Z0-9]+).*$/);
+        ext = (extTmp && extTmp.length > 1 ? extTmp[1] : null);
+        
+        let filePath = urlToPath(fileUrl);
 
+        console.log(fileUrl)
+        console.log(ext)
+        if (ext == null || minSize > 0)
+        {
+            const response = await fetch(fileUrl, { method:'HEAD' });
+
+            if (ext == null)
+            {
+                const contentType = response.headers.get('Content-Type');
+                filePath += ("." + ext);
+                ext = contentType.match(/^.+?\/([a-zA-Z0-9.-]+).*$/)[1];
+                console.log(ext)
+            }
+            
+            if (minSize > 0)
+            {
+                const contentLength = response.headers.get('Content-Length');
+                if (contentLength < minSize)
+                {
+                    return { url: fileUrl, ext };
+                }
+            }
+        }
+        
         if (!allowOutside && !fileUrl.startsWith(url))
         {
             return { url: fileUrl, ext };
         }
 
-        let filePath = urlToPath(fileUrl);
-
-        const headers = await fetch(fileUrl, { method:'HEAD' });
-
-        const contentType = headers.headers.get('Content-Type');
-        if (contentType.includes("text/html") && ext !== "htm" && ext !== "html")
-        {
-            ext = "html";
-            filePath += ("." + ext)
-        }
-
         if (!downloadExtensionsRE.test(ext) || excludeExtensionsRE.test(ext))
-        {
-            return { url: fileUrl, ext };
-        }
-
-        const contentLength = headers.headers.get('Content-Length');
-        if (contentLength < minSize)
         {
             return { url: fileUrl, ext };
         }
