@@ -190,8 +190,6 @@ async function downloadFile(fileUrl, downloadExtensionsRE, excludeExtensionsRE, 
         
         let filePath = urlToPath(fileUrl);
 
-        console.log(fileUrl)
-        console.log(ext)
         if (ext == null || minSize > 0)
         {
             const response = await fetch(fileUrl, { method:'HEAD' });
@@ -201,7 +199,6 @@ async function downloadFile(fileUrl, downloadExtensionsRE, excludeExtensionsRE, 
                 const contentType = response.headers.get('Content-Type');
                 filePath += ("." + ext);
                 ext = contentType.match(/^.+?\/([a-zA-Z0-9.-]+).*$/)[1];
-                console.log(ext)
             }
             
             if (minSize > 0)
