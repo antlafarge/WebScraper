@@ -16,7 +16,7 @@ Example
 ```
 node main.js "http://www.example.com/" "jpg|jpeg" "jpg2" 100 1 200 "true"
 ```
-*Download from [http://www.example.com/](http://www.example.com/) every \*.jpg or \*.jpeg image files more than 100 bytes, exclude \*.jpg2 files, recurse on all links 1 time  each 200 milliseconds, and allow scraping script to scrap websites referenced by the source web page.*
+*Download from [http://www.example.com/](http://www.example.com/) every \*.jpg or \*.jpeg image files more than 100 bytes, exclude \*.jpg2 files, recurse on all links 1 time  each 200 milliseconds, and allow scraping script to scrap external websites referenced by the source web page.*
 
 Logs
 ```
