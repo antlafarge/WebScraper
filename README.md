@@ -1,7 +1,7 @@
 WebScraper
 ==========
 
-Check for links in html and download files (to `./downloads/` folder) which match required filters.  
+Check for links in html and download files which match required filters to `./downloads/` folder.  
 The scraper will search for links in these html tags :
 - `<a href=".."></a>`
 - `<img src=".." />`
