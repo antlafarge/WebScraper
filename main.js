@@ -5,7 +5,7 @@
 // - downloadExtensions : File extentions to download (default: "*") (example: "jpg|jpeg|png|gif" for pictures)
 // - excludeExtensions : File extentions to exclude (default: "null") (example: "htm|html" for html files)
 // - minSize : Minimal file size to download (in bytes) (default: 0) (example: 1024000 for 1MB)
-// - deep : Recursive scap count from starting url (default: 0)
+// - deep : Recursive scrap count from starting url (default: 0)
 // - delay : Delay between each page scrap (in milliseconds) (default: 500)
 // - allowOutside : Allow the scraper to parse or download files outside the original source (default: "false")
 
