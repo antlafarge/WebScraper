@@ -25,12 +25,12 @@ const allowOutside = (args[6] == "true");
 
 console.log("Settings:", { url, downloadExtensions, excludeExtensions, minSize, deep, delay, allowOutside });
 
-const baseUrl = url.match(/^(https?:\/\/.+?\..+?)((\/|\?).*)?$/)[1];
-
 if (typeof(url) !== 'string' || !url.includes('http'))
 {
     throw 'Starting url is invalid';
 }
+
+const baseUrl = url.match(/^(https?:\/\/.+?\..+?)((\/|\?).*)?$/)[1];
 
 const seenUrls = {}
 const urls = [];
