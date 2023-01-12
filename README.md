@@ -9,20 +9,20 @@ The scraper will search for links in these html tags :
 - `<source src=".." />`
 
 ```
-node main.js "<url>" "<downloadRegExp>" "<excludeRegExp>" <minSize> <deep> <delay> "<allowOutside>"
+node main.js "<url>" "<downloadRegExp>" "<excludeRegExp>" <minSize> <maxSize> <deep> <delay> "<allowOutside>"
 ```
 
 Example
 ```bash
 # Simple
-node main.js "http://www.example.com/" "\.jpg$" "\.html$" 100 1 200 "true"
+node main.js "http://www.example.com/" "\.jpg$" "\.html$" 100 1024000 1 200 "true"
 
 # Advanced
-node main.js "http://www.example.com/" "\.(jpe?g|png|webp|gif)[^\/]*$" "\.htm(l|l5)?[^\/]*$" 100 1 200 "true"
+node main.js "http://www.example.com/" "\.(jpe?g|png|webp|gif)[^\/]*$" "\.htm(l|l5)?[^\/]*$" 100 1024000 1 200 "true"
 ```
-*Download from [http://www.example.com/](http://www.example.com/) every image files more than 100 bytes, exclude html files, recurse on all links 1 time each 200 milliseconds, and allow scraping script to scrap external websites (based on url).*
+*From [http://www.example.com/](http://www.example.com/), download every image files between 100 Bytes and 1 MByte, exclude html files, recurse on all links 1 time, wait 200 milliseconds to fetch each file, and allow to scrap urls with a different host url.*
 
-*Note: `[^\/]*` is used in regular expressions to ignore query parameters at the end of file urls.*
+*Note: `[^\/]*` is used at end of regular expressions to ignore query parameters at the end of file urls.*
 
 Logs
 ```

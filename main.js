@@ -5,6 +5,7 @@
 // - downloadRegExp : File urls which match this regular expression will be downloaded (case insensitive) (default: "") (example: "\.(jpe?g|png|webp|gif)[^\/]*$" for picture files (`[^\/]*` is used to ignore query parameters at the end of file urls))
 // - excludeRegExp : File urls which match this regular expression will be excluded (case insensitive) (default: "") (example: "\.htm(l|l5)?[^\/]*$" for html files)
 // - minSize : Minimal file size to download (in bytes) (default: 0) (example: 1024000 for 1MB)
+// - maxSize : Maximal file size to download (in bytes) (default: 0) (example: 1024000000 for 1GB)
 // - deep : Recursive scrap count from starting url (default: 0)
 // - delay : Delay between each page scrap (in milliseconds) (default: 500)
 // - allowOutside : Allow the scraper to parse or download files outside the original source (default: "false")
@@ -21,9 +22,10 @@ const initialUrl = args[0];
 const downloadRegExp = (args[1] ?? "");
 const excludeRegExp = (args[2] ?? "");
 const minSize = parseInt(args[3] ?? 0);
-const deep = parseInt(args[4] ?? 0);
-const delay = parseInt(args[5] ?? 500);
-const allowOutside = (args[6] == "true");
+const maxSize = parseInt(args[4] ?? 0);
+const deep = parseInt(args[5] ?? 0);
+const delay = parseInt(args[6] ?? 500);
+const allowOutside = (args[7] == "true");
 
 log("Settings:", { initialUrl, downloadRegExp, excludeRegExp, minSize, deep, delay, allowOutside });
 
@@ -99,9 +101,12 @@ async function scrap({ url, refererUrl, deep })
         {
             const newUrl = getUrl(fileUrl, url, baseUrl);
 
-            await handleUrl(newUrl, url, deep);
+            const fetched = await handleUrl(newUrl, url, deep);
 
-            await sleep(delay);
+            if (fetched)
+            {
+                await sleep(delay);
+            }
         }
     }
 
@@ -185,6 +190,8 @@ function getUrl(url, pageUrl)
 
 async function handleUrl(url, refererUrl, deep)
 {
+    log(`\tHandle [${deep}]`, url);
+
     let filePath = urlToPath(url);
 
     if (/.+\/$/.test(url))
@@ -204,17 +211,19 @@ async function handleUrl(url, refererUrl, deep)
         downloadFile = false;
     }
 
+    let fetched = false;
     let headers;
 
     let extTmp = url.match(/\.([A-Z0-9]+)[^\/]*$/i);
     let ext = ((extTmp && extTmp.length > 1) ? extTmp[1] : null);
 
-    if (ext == null || (downloadFile && minSize > 0))
+    if (ext == null || (downloadFile && (minSize > 0 || maxSize > 0)))
     {
         headers = getHeaders(url, refererUrl);
         try
         {
             const response = await fetch(url, { method:'HEAD', headers });
+            fetched = true;
 
             if (ext == null)
             {
@@ -224,10 +233,10 @@ async function handleUrl(url, refererUrl, deep)
                 filePath += `.${ext}`;
             }
             
-            if (downloadFile && minSize > 0)
+            if (downloadFile && (minSize > 0 || maxSize > 0))
             {
                 const contentLength = response.headers.get('Content-Length');
-                if (contentLength < minSize)
+                if (contentLength < minSize || contentLength > maxSize)
                 {
                     downloadFile = false;
                 }
@@ -253,6 +262,7 @@ async function handleUrl(url, refererUrl, deep)
             log(`\tDownload [${++downloadCount}] "${url}"`);
             headers ??= getHeaders(url, refererUrl);
             const response = await fetch(url, { method:'GET', headers });
+            fetched = true;
             const buffer = await response.arrayBuffer();
             await fs.writeFile(filePath, new DataView(buffer), () => {});
         }
@@ -267,6 +277,8 @@ async function handleUrl(url, refererUrl, deep)
         urls.push({ url, refererUrl, deep: (deep - 1) });
         totalCount++;
     }
+
+    return fetched;
 }
 
 function urlToPath(url)
