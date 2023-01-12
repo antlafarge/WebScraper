@@ -4,6 +4,8 @@ MAINTAINER ant.lafarge@gmail.com
 
 RUN npm isntall -g npm
 
+ENV WEBSCRAPER_VERBOSE='false'
+
 WORKDIR /usr/src/app
 
 COPY package.json \

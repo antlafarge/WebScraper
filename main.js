@@ -27,7 +27,9 @@ const deep = parseInt(args[5] ?? 0);
 const delay = parseInt(args[6] ?? 500);
 const allowOutside = (args[7] == "true");
 
-log("Settings:", { initialUrl, downloadRegExp, excludeRegExp, minSize, maxSize, deep, delay, allowOutside });
+const verbose = /^true$/i.test(process.env.WEBSCRAPER_VERBOSE);
+
+log("Settings:", { initialUrl, downloadRegExp, excludeRegExp, minSize, maxSize, deep, delay, allowOutside, verbose });
 
 if (typeof(initialUrl) !== 'string' || ! /^http/i.test(initialUrl))
 {
@@ -190,7 +192,10 @@ function getUrl(url, pageUrl)
 
 async function handleUrl(url, refererUrl, deep)
 {
-    log(`\tHandle [${deep}]`, url);
+    if (verbose)
+    {
+        log(`\tHandle [${deep}]`, url);
+    }
 
     let filePath = urlToPath(url);
 

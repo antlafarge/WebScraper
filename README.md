@@ -32,6 +32,10 @@ docker logs --follow --tail 100 wsp
 ```
 [`Date`] Scrap [`12th` / `14` | `3 to parse` | `recurse 1 time` ] "`Current page url`"
 
+## Environment variables
+
+- WEBSCRAPER_VERBOSE : `true` or `false`
+
 # Install Node.js
 
 ## Windows
