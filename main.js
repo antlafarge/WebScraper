@@ -2,8 +2,8 @@
 // Usage : main.js "<url>" "<downloadExtensions>" "<excludeExtensions>" <minSize> <deep> <delay> "<allowOutside>"
 // Parameters :
 // - url : Starting url
-// - downloadExtensions : File extentions to download (default: "*") (example: "jpg|jpeg|png|gif" for pictures)
-// - excludeExtensions : File extentions to exclude (default: "null") (example: "htm|html" for html files)
+// - downloadRegExp : File urls which match this regular expression will be downloaded (case insensitive) (default: "") (example: "\.(jpe?g|png|webp|gif)[^\/]*$" for picture files (`[^\/]*` is used to ignore query parameters at the end of file urls))
+// - excludeRegExp : File urls which match this regular expression will be excluded (case insensitive) (default: "") (example: "\.htm(l|l5)?[^\/]*$" for html files)
 // - minSize : Minimal file size to download (in bytes) (default: 0) (example: 1024000 for 1MB)
 // - deep : Recursive scrap count from starting url (default: 0)
 // - delay : Delay between each page scrap (in milliseconds) (default: 500)
@@ -17,22 +17,22 @@ const { JSDOM } = jsdom;
 
 var args = process.argv.slice(2);
 
-const url = args[0];
-const downloadExtensions = (args[1] ?? "*");
-const excludeExtensions = (args[2] ?? "null");
+const initialUrl = args[0];
+const downloadRegExp = (args[1] ?? "");
+const excludeRegExp = (args[2] ?? "");
 const minSize = parseInt(args[3] ?? 0);
 const deep = parseInt(args[4] ?? 0);
 const delay = parseInt(args[5] ?? 500);
 const allowOutside = (args[6] == "true");
 
-console.log("Settings:", { url, downloadExtensions, excludeExtensions, minSize, deep, delay, allowOutside });
+log("Settings:", { initialUrl, downloadRegExp, excludeRegExp, minSize, deep, delay, allowOutside });
 
-if (typeof(url) !== 'string' || !url.includes('http'))
+if (typeof(initialUrl) !== 'string' || ! /^http/i.test(initialUrl))
 {
-    throw 'Starting url is invalid';
+    throw 'Url is invalid';
 }
 
-const baseUrl = url.match(/^(https?:\/\/.+?\..+?)((\/|\?).*)?$/)[1];
+const baseUrl = initialUrl.match(/^(https?:\/\/.+?\..+?)((\/|\?).*)?$/i)[1];
 
 const seenUrls = {}
 const urls = [];
@@ -40,14 +40,14 @@ let scrapCount = 0;
 let totalCount = 1;
 let downloadCount = 0;
 
-const downloadExtensionsRE = new RegExp((downloadExtensions === "*" ? "" : `^(${downloadExtensions})$`));
-const excludeExtensionsRE = new RegExp((excludeExtensions === "null" ? "a^" : `^(${excludeExtensions})$`));
+const downloadRE = downloadRegExp.length ? new RegExp(downloadRegExp, 'i') : /./;
+const excludeRE = excludeRegExp.length ? new RegExp(excludeRegExp, 'i') : /a^/;
 
-scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, deep, delay, baseUrl, allowOutside, refererUrl: '' });
+scrap({ url: initialUrl, refererUrl: '', deep });
 
-async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, deep, delay, baseUrl, allowOutside, refererUrl })
+async function scrap({ url, refererUrl, deep })
 {
-    console.log(`Scrap [${++scrapCount}/${totalCount}|${urls.length}|${deep}] "${url}"`);
+    log(`Scrap [${++scrapCount}/${totalCount}|${urls.length}|${deep}] "${url}"`);
 
     seenUrls[url] = true;
 
@@ -61,7 +61,7 @@ async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, 
             const headers = getHeaders(url, refererUrl);
             const responseHeaders = await fetch(url, { method:'HEAD', headers });
             const contentType = responseHeaders.headers.get('Content-Type');
-            if (!contentType.includes("text/html"))
+            if (! contentType.includes("text/html"))
             {
                 scrapNext(delay);
                 return;
@@ -72,7 +72,7 @@ async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, 
         }
         catch (ex)
         {
-            console.error(`[${(new Date()).toISOString()}] Fetch failed:`, url, ex);
+            logError('Fetch failed:', url, ex);
             response = null;
             retryCount--;
             if (retryCount === 0)
@@ -99,19 +99,13 @@ async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, 
         {
             const newUrl = getUrl(fileUrl, url, baseUrl);
 
-            const data = await downloadFile(newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, allowOutside, url);
-
-            if (deep > 0 && data && (data.ext.startsWith("htm") || data.ext.startsWith("php")) && canScrap(newUrl, baseUrl, allowOutside))
-            {
-                urls.push({ url: newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, deep: (deep - 1), delay, baseUrl, allowOutside });
-                totalCount++;
-            }
+            await handleUrl(newUrl, url, deep);
 
             await sleep(delay);
         }
     }
 
-    scrapNext(delay);
+    scrapNext();
 }
 
 // Parse html file
@@ -122,7 +116,7 @@ async function getDocument(response)
     return dom.window.document;
 }
 
-function scrapNext(delay)
+function scrapNext()
 {
     setTimeout(() =>
     {
@@ -137,7 +131,7 @@ function scrapNext(delay)
     }, delay);
 }
 
-function canScrap(url, baseUrl, allowOutside)
+function canScrap(url)
 {
     return (seenUrls[url] === undefined && (allowOutside || url.startsWith(baseUrl)));
 }
@@ -147,7 +141,7 @@ function sleep(ms)
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function getUrl(url, pageUrl, baseUrl)
+function getUrl(url, pageUrl)
 {
     if (url.includes('#'))
     {
@@ -189,77 +183,95 @@ function getUrl(url, pageUrl, baseUrl)
     return finalUrl;
 }
 
-async function downloadFile(fileUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, allowOutside, refererUrl)
+async function handleUrl(url, refererUrl, deep)
 {
-    let ext = null;
+    let filePath = urlToPath(url);
 
-    try
+    if (/.+\/$/.test(url))
     {
-        const extTmp = fileUrl.match(/^https?:\/\/.+\/.+\.([a-zA-Z0-9]+).*$/);
-        ext = (extTmp && extTmp.length > 1 ? extTmp[1] : null);
-        
-        let filePath = urlToPath(fileUrl);
+        url += 'index';
+    }
+    
+    let downloadFile = true;
 
-        let headers;
+    if (downloadFile && ! allowOutside && ! url.startsWith(url))
+    {
+        downloadFile = false;
+    }
 
-        if (ext == null || minSize > 0)
+    if (downloadFile && (! downloadRE.test(url) || excludeRE.test(url)))
+    {
+        downloadFile = false;
+    }
+
+    let headers;
+
+    let extTmp = url.match(/\.([A-Z0-9]+)[^\/]*$/i);
+    let ext = ((extTmp && extTmp.length > 1) ? extTmp[1] : null);
+
+    if (ext == null || (downloadFile && minSize > 0))
+    {
+        headers = getHeaders(url, refererUrl);
+        try
         {
-            headers = getHeaders(fileUrl, refererUrl);
-            const response = await fetch(fileUrl, { method:'HEAD', headers });
+            const response = await fetch(url, { method:'HEAD', headers });
 
             if (ext == null)
             {
                 const contentType = response.headers.get('Content-Type');
-                ext = contentType.match(/^.+?\/([a-zA-Z0-9.-]+).*$/)[1];
-                filePath += ("." + ext);
+                extTmp = contentType.match(/.+?\/([\w-]+).*$/i);
+                ext = ((extTmp && extTmp.length > 1) ? extTmp[1] : null);
+                filePath += `.${ext}`;
             }
             
-            if (minSize > 0)
+            if (downloadFile && minSize > 0)
             {
                 const contentLength = response.headers.get('Content-Length');
                 if (contentLength < minSize)
                 {
-                    return { url: fileUrl, ext };
+                    downloadFile = false;
                 }
             }
         }
-        
-        if (!allowOutside && !fileUrl.startsWith(url))
+        catch (ex)
         {
-            return { url: fileUrl, ext };
+            logError('HEAD failed', url, ex);
         }
+    }
+    
+    if (downloadFile && await fileExists(filePath))
+    {
+        downloadFile = false;
+    }
 
-        if (!downloadExtensionsRE.test(ext) || excludeExtensionsRE.test(ext))
-        {
-            return { url: fileUrl, ext };
-        }
-
-        if (await fileExists(filePath))
-        {
-            return { url: fileUrl, ext };
-        }
-
+    if (downloadFile)
+    {   
         await createOutputDirs(filePath);
 
-        log(`\tDownload [${++downloadCount}] "${fileUrl}"`);
-        if (headers == null)
+        try
         {
-            headers = getHeaders(fileUrl, refererUrl);
+            log(`\tDownload [${++downloadCount}] "${url}"`);
+            headers ??= getHeaders(url, refererUrl);
+            const response = await fetch(url, { method:'GET', headers });
+            const buffer = await response.arrayBuffer();
+            await fs.writeFile(filePath, new DataView(buffer), () => {});
         }
-        const response = await fetch(fileUrl, { method:'GET', headers });
-        const buffer = await response.arrayBuffer();
-        await fs.writeFile(filePath, new DataView(buffer), () => {});
+        catch (ex)
+        {
+            logError('Download failed', url, ex);
+        }
     }
-    catch (ex)
+    
+    if (deep > 0 && /^(htm|php)/i.test(ext) && canScrap(url))
     {
-        console.error(`[${(new Date()).toISOString()}] Download failed`, fileUrl, ex);
+        urls.push({ url, refererUrl, deep: (deep - 1) });
+        totalCount++;
     }
-    return { url: fileUrl, ext };
 }
 
 function urlToPath(url)
 {
-    return decodeURIComponent("./downloads/" + url.trim().replace(/^https?:\/\//, "").replace(/\\/g, "/").replace(/[:*?"<>|]/g, " ").trim());
+    return decodeURIComponent("./downloads/" + url.trim().replace(/^https?:\/\//i, "").replace(/\\/g, "/").replace(/[:*?"<>|]/g, " ").trim());
 }
 
 async function createOutputDirs(filePath)
@@ -274,9 +286,24 @@ async function createOutputDirs(filePath)
     }
 }
 
-function log(message)
+function log(message, data)
 {
-    console.log(`[${(new Date()).toISOString()}] ${message}`);
+    console.log(`[${(new Date()).toISOString()}]`, ...arguments);
+}
+
+function logInfo(message, data)
+{
+    console.info(`[${(new Date()).toISOString()}]`, ...arguments);
+}
+
+function logWarn(message, data)
+{
+    console.warn(`[${(new Date()).toISOString()}]`, ...arguments);
+}
+
+function logError(message, data)
+{
+    console.error(`[${(new Date()).toISOString()}]`, ...arguments);
 }
 
 function fileExists(filePath)
@@ -286,8 +313,8 @@ function fileExists(filePath)
 
 function getHeaders(url, refererUrl)
 {
-    const host = url.replace(/^(https?:\/\/)?(.+?)(\/.*)?$/, '$2');
-    const referer = refererUrl ? refererUrl.replace(/^(https?:\/\/)?(.+?)(\/.*)?$/, '$1$2/') : '';
+    const host = url.replace(/^(https?:\/\/)?(.+?)(\/.*)?$/i, '$2');
+    const referer = refererUrl ? refererUrl.replace(/^(https?:\/\/)?(.+?)(\/.*)?$/i, '$1$2/') : '';
     const headers =
     {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
