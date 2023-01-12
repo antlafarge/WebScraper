@@ -1,6 +1,9 @@
 FROM node:latest
 
-MAINTAINER ant.lafarge@gmail.com
+LABEL maintainer.name="Antoine Lafarge"
+LABEL maintainer.email="ant.lafarge@gmail.com"
+LABEL maintainer.github="https://github.com/antlafarge"
+LABEL maintainer.dockerhub="https://hub.docker.com/u/antlafarge"
 
 RUN npm isntall -g npm
 
