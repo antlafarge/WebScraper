@@ -27,7 +27,7 @@ const deep = parseInt(args[5] ?? 0);
 const delay = parseInt(args[6] ?? 500);
 const allowOutside = (args[7] == "true");
 
-log("Settings:", { initialUrl, downloadRegExp, excludeRegExp, minSize, deep, delay, allowOutside });
+log("Settings:", { initialUrl, downloadRegExp, excludeRegExp, minSize, maxSize, deep, delay, allowOutside });
 
 if (typeof(initialUrl) !== 'string' || ! /^http/i.test(initialUrl))
 {
