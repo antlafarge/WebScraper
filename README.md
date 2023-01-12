@@ -48,7 +48,7 @@ sudo apt update && sudo apt install -y nodejs npm
 
 ```
 docker build --rm -t webscraper .
-docker run -d --rm -v "$PWD/downloads/":/usr/src/app/downloads/ --name wsp webscraper "http://www.example.com/" "*" "null" 0 0 500 "false"
+docker run -d --rm -v "$PWD/downloads/":/usr/src/app/downloads/ --name wsp webscraper "http://www.example.com/" "" "" 0 0 0 500 "false"
 ```
 *Omit the `--rm` option to follow the logs by using `docker logs --follow --tail 100 wsp`*
 
