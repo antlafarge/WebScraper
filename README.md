@@ -89,7 +89,7 @@ You are ready !
 ```
 npm isntall -g npm
 npm init -y
-npm install --save cheerio node-fetch
+npm install --save jsdom node-fetch
 npm install --save
-node script.js
+node main.js
 ```

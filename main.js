@@ -9,15 +9,17 @@
 // - delay : Delay between each page scrap (in milliseconds) (default: 500)
 // - allowOutside : Allow the scraper to parse or download files outside the original source (default: "false")
 
-import fetch from 'node-fetch';
-import * as cheerio from 'cheerio';
-import * as fs from 'fs';
+import fs from 'fs/promises';
+import fetch from 'node-fetch'
+
+import jsdom from 'jsdom';
+const { JSDOM } = jsdom;
 
 var args = process.argv.slice(2);
 
 const url = args[0];
 const downloadExtensions = (args[1] ?? "*");
-const excludeExtensions = (args[2] ?? "*");
+const excludeExtensions = (args[2] ?? "null");
 const minSize = parseInt(args[3] ?? 0);
 const deep = parseInt(args[4] ?? 0);
 const delay = parseInt(args[5] ?? 500);
@@ -41,9 +43,9 @@ let downloadCount = 0;
 const downloadExtensionsRE = new RegExp((downloadExtensions === "*" ? "" : `^(${downloadExtensions})$`));
 const excludeExtensionsRE = new RegExp((excludeExtensions === "null" ? "a^" : `^(${excludeExtensions})$`));
 
-scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, deep, delay, baseUrl, allowOutside });
+scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, deep, delay, baseUrl, allowOutside, refererUrl: '' });
 
-async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, deep, delay, baseUrl, allowOutside })
+async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, deep, delay, baseUrl, allowOutside, refererUrl })
 {
     console.log(`Scrap [${++scrapCount}/${totalCount}|${urls.length}|${deep}] "${url}"`);
 
@@ -56,8 +58,9 @@ async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, 
         try
         {
             // Check url targets an html file
-            const headers = await fetch(url, { method:'HEAD' });
-            const contentType = headers.headers.get('Content-Type');
+            const headers = getHeaders(url, refererUrl);
+            const responseHeaders = await fetch(url, { method:'HEAD', headers });
+            const contentType = responseHeaders.headers.get('Content-Type');
             if (!contentType.includes("text/html"))
             {
                 scrapNext(delay);
@@ -65,7 +68,7 @@ async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, 
             }
 
             // Fetch html file
-            response = await fetch(url);
+            response = await fetch(url, { method:'GET', headers });
         }
         catch (ex)
         {
@@ -81,16 +84,14 @@ async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, 
         }
     }
 
-    // Parse html file
-    const html = await response.text();
-    const $ = cheerio.load(html);
+    const document = await getDocument(response);
 
-    const imageUrls = $('img').map((i, img) => img.attribs.src).get();
-    const linkUrls = $('a').map((i, link) => link.attribs.href).get();
-    const videoUrls = $('video').map((i, video) => video.attribs.src).get();
-    const sourceUrls = $('source').map((i, source) => source.attribs.src).get();
+    const imageUrls = Array.from(document.querySelectorAll('img')).map(img => img.src);
+    const linkUrls = Array.from(document.querySelectorAll('a')).map(link => link.href);
+    const videoUrls = Array.from(document.querySelectorAll('video')).map(video => video.src);
+    const sourceUrls = Array.from(document.querySelectorAll('source')).map(source => source.src);
 
-    const fileUrls = imageUrls.concat(linkUrls).concat(videoUrls).concat(sourceUrls);
+    const fileUrls = [...imageUrls, ...linkUrls, ...videoUrls, ...sourceUrls];
 
     for (const fileUrl of fileUrls)
     {
@@ -98,7 +99,7 @@ async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, 
         {
             const newUrl = getUrl(fileUrl, url, baseUrl);
 
-            const data = await downloadFile(newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, allowOutside);
+            const data = await downloadFile(newUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, allowOutside, url);
 
             if (deep > 0 && data && (data.ext.startsWith("htm") || data.ext.startsWith("php")) && canScrap(newUrl, baseUrl, allowOutside))
             {
@@ -111,6 +112,14 @@ async function scrap({ url, downloadExtensionsRE, excludeExtensionsRE, minSize, 
     }
 
     scrapNext(delay);
+}
+
+// Parse html file
+async function getDocument(response)
+{
+    const html = await response.text();
+    const dom = new JSDOM(html);
+    return dom.window.document;
 }
 
 function scrapNext(delay)
@@ -180,7 +189,7 @@ function getUrl(url, pageUrl, baseUrl)
     return finalUrl;
 }
 
-async function downloadFile(fileUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, allowOutside)
+async function downloadFile(fileUrl, downloadExtensionsRE, excludeExtensionsRE, minSize, allowOutside, refererUrl)
 {
     let ext = null;
 
@@ -191,15 +200,18 @@ async function downloadFile(fileUrl, downloadExtensionsRE, excludeExtensionsRE, 
         
         let filePath = urlToPath(fileUrl);
 
+        let headers;
+
         if (ext == null || minSize > 0)
         {
-            const response = await fetch(fileUrl, { method:'HEAD' });
+            headers = getHeaders(fileUrl, refererUrl);
+            const response = await fetch(fileUrl, { method:'HEAD', headers });
 
             if (ext == null)
             {
                 const contentType = response.headers.get('Content-Type');
-                filePath += ("." + ext);
                 ext = contentType.match(/^.+?\/([a-zA-Z0-9.-]+).*$/)[1];
+                filePath += ("." + ext);
             }
             
             if (minSize > 0)
@@ -222,17 +234,21 @@ async function downloadFile(fileUrl, downloadExtensionsRE, excludeExtensionsRE, 
             return { url: fileUrl, ext };
         }
 
-        if (fs.existsSync(filePath))
+        if (await fileExists(filePath))
         {
             return { url: fileUrl, ext };
         }
 
-        createOutputDirs(filePath);
+        await createOutputDirs(filePath);
 
         log(`\tDownload [${++downloadCount}] "${fileUrl}"`);
-        const response = await fetch(fileUrl);
+        if (headers == null)
+        {
+            headers = getHeaders(fileUrl, refererUrl);
+        }
+        const response = await fetch(fileUrl, { method:'GET', headers });
         const buffer = await response.arrayBuffer();
-        fs.writeFile(filePath, new DataView(buffer), () => {});
+        await fs.writeFile(filePath, new DataView(buffer), () => {});
     }
     catch (ex)
     {
@@ -246,19 +262,47 @@ function urlToPath(url)
     return decodeURIComponent("./downloads/" + url.trim().replace(/^https?:\/\//, "").replace(/\\/g, "/").replace(/[:*?"<>|]/g, " ").trim());
 }
 
-function createOutputDirs(filePath)
+async function createOutputDirs(filePath)
 {
     const dirs = filePath.split('/');
     dirs.pop();
     const dirPath = dirs.join('/');
-    if (!fs.existsSync(dirPath))
+    if (! await fileExists(dirPath))
     {
         log(`\tmkdir "${dirPath}"`);
-        fs.mkdirSync(dirPath, { recursive: true });
+        await fs.mkdir(dirPath, { recursive: true });
     }
 }
 
 function log(message)
 {
     console.log(`[${(new Date()).toISOString()}] ${message}`);
+}
+
+function fileExists(filePath)
+{
+    return fs.stat(filePath).then(() => true).catch(() => false);
+}
+
+function getHeaders(url, refererUrl)
+{
+    const host = url.replace(/^(https?:\/\/)?(.+?)(\/.*)?$/, '$2');
+    const referer = refererUrl ? refererUrl.replace(/^(https?:\/\/)?(.+?)(\/.*)?$/, '$1$2/') : '';
+    const headers =
+    {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept-Language': 'fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3',
+        'Alt-Used': host,
+        'Host': host,
+        'Referer': referer ?? 'https://www.google.com',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'same-origin',
+        'Sec-Fetch-User': '?1',
+        'TE': 'trailers',
+        'Upgrade-Insecure-Requests': 1,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101 Firefox/108.0'
+    };
+    return headers;
 }
