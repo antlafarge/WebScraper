@@ -15,12 +15,12 @@ node main.js "<url>" "<downloadRegExp>" "<excludeRegExp>" <minSize> <maxSize> <d
 Example
 ```bash
 # Simple
-node main.js "http://www.example.com/" "\.jpg$" "\.html$" 100 1024000 1 200 "true"
+node main.js "http://www.example.com/" "\.jpg$" "\.html$" 100 1048576 1 200 "true"
 
 # Advanced
-node main.js "http://www.example.com/" "\.(jpe?g|png|webp|gif)[^\/]*$" "\.htm(l|l5)?[^\/]*$" 100 1024000 1 200 "true"
+node main.js "http://www.example.com/" "\.(jpe?g|png|webp|gif)[^\/]*$" "\.htm(l|l5)?[^\/]*$" 100 1048576 1 200 "true"
 ```
-*From [http://www.example.com/](http://www.example.com/), download every image files between 100 Bytes and 1 MByte, exclude html files, recurse on all links 1 time, wait 200 milliseconds to fetch each file, and allow to scrap urls with a different host url.*
+*From [http://www.example.com/](http://www.example.com/), download every image files between 100 Bytes and 1 MByte (1024 * 1024 Bytes), exclude html files, recurse on all links 1 time, wait 200 milliseconds to fetch each file, and allow to scrap urls with a different host url.*
 
 *Note: `[^\/]*` is used at end of regular expressions to ignore query parameters at the end of file urls.*
 

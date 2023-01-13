@@ -4,8 +4,8 @@
 // - url : Starting url
 // - downloadRegExp : File urls which match this regular expression will be downloaded (case insensitive) (default: "") (example: "\.(jpe?g|png|webp|gif)[^\/]*$" for picture files (`[^\/]*` is used to ignore query parameters at the end of file urls))
 // - excludeRegExp : File urls which match this regular expression will be excluded (case insensitive) (default: "") (example: "\.htm(l|l5)?[^\/]*$" for html files)
-// - minSize : Minimal file size to download (in bytes) (default: 0) (example: 1024000 for 1MB)
-// - maxSize : Maximal file size to download (in bytes) (default: 0) (example: 1024000000 for 1GB)
+// - minSize : Minimal file size to download (in bytes) (default: 0) (example: 1048576 for 1MB)
+// - maxSize : Maximal file size to download (in bytes) (default: 0) (example: 1073741824 for 1GB)
 // - deep : Recursive scrap count from starting url (default: 0)
 // - delay : Delay between each page scrap (in milliseconds) (default: 500)
 // - allowOutside : Allow the scraper to parse or download files outside the original source (default: "false")
@@ -27,7 +27,7 @@ const deep = parseInt(args[5] ?? 0);
 const delay = parseInt(args[6] ?? 500);
 const allowOutside = (args[7] == "true");
 
-const verbose = /^true$/i.test(process.env.WEBSCRAPER_VERBOSE);
+const verbose = (process.env.WEBSCRAPER_VERBOSE != null) ? /^\s*true\s*$/i.test(process.env.WEBSCRAPER_VERBOSE) : true;
 
 log("Settings:", { initialUrl, downloadRegExp, excludeRegExp, minSize, maxSize, deep, delay, allowOutside, verbose });
 
@@ -103,12 +103,9 @@ async function scrap({ url, refererUrl, deep })
         {
             const newUrl = getUrl(fileUrl, url, baseUrl);
 
-            const fetched = await handleUrl(newUrl, url, deep);
+            await handleUrl(newUrl, url, deep);
 
-            if (fetched)
-            {
-                await sleep(delay);
-            }
+            await sleep(delay);
         }
     }
 
@@ -204,72 +201,61 @@ async function handleUrl(url, refererUrl, deep)
         url += 'index';
     }
     
-    let downloadFile = true;
+    let canDownloadFile = true;
 
-    if (downloadFile && ! allowOutside && ! url.startsWith(url))
+    if (canDownloadFile && ! allowOutside && ! url.startsWith(url))
     {
-        downloadFile = false;
+        canDownloadFile = false;
     }
 
-    if (downloadFile && (! downloadRE.test(url) || excludeRE.test(url)))
+    if (canDownloadFile && (! downloadRE.test(url) || excludeRE.test(url)))
     {
-        downloadFile = false;
+        canDownloadFile = false;
     }
-
-    let fetched = false;
-    let headers;
 
     let extTmp = url.match(/\.([A-Z0-9]+)[^\/]*$/i);
     let ext = ((extTmp && extTmp.length > 1) ? extTmp[1] : null);
+    let acceptRanges;
+    let contentLength;
 
-    if (ext == null || (downloadFile && (minSize > 0 || maxSize > 0)))
+    try
     {
-        headers = getHeaders(url, refererUrl);
-        try
-        {
-            const response = await fetch(url, { method:'HEAD', headers });
-            fetched = true;
+        const response = await fetch(url, { method:'HEAD', headers:getHeaders(url, refererUrl) });
 
-            if (ext == null)
-            {
-                const contentType = response.headers.get('Content-Type');
-                extTmp = contentType.match(/.+?\/([\w-]+).*$/i);
-                ext = ((extTmp && extTmp.length > 1) ? extTmp[1] : null);
-                filePath += `.${ext}`;
-            }
-            
-            if (downloadFile && (minSize > 0 || maxSize > 0))
-            {
-                const contentLength = response.headers.get('Content-Length');
-                if (contentLength < minSize || contentLength > maxSize)
-                {
-                    downloadFile = false;
-                }
-            }
-        }
-        catch (ex)
+        if (ext == null)
         {
-            logError('HEAD failed', url, ex);
+            const contentType = response.headers.get('Content-Type');
+            extTmp = contentType.match(/.+?\/([\w-]+).*$/i);
+            ext = ((extTmp && extTmp.length > 1) ? extTmp[1] : null);
+            filePath += `.${ext}`;
         }
+        
+        contentLength = response.headers.get('Content-Length');
+        acceptRanges = response.headers.get('Accept-Ranges');
+
+        if (canDownloadFile && ((minSize > 0 && contentLength < minSize) || (maxSize > 0 && contentLength > maxSize)))
+        {
+            canDownloadFile = false;
+        }
+    }
+    catch (ex)
+    {
+        logError('HEAD failed', url, ex);
     }
     
-    if (downloadFile && await fileExists(filePath))
+    if (canDownloadFile && await fileExists(filePath))
     {
-        downloadFile = false;
+        canDownloadFile = false;
     }
 
-    if (downloadFile)
+    if (canDownloadFile)
     {   
         await createOutputDirs(filePath);
 
         try
         {
             log(`\tDownload [${++downloadCount}] "${url}"`);
-            headers ??= getHeaders(url, refererUrl);
-            const response = await fetch(url, { method:'GET', headers });
-            fetched = true;
-            const buffer = await response.arrayBuffer();
-            await fs.writeFile(filePath, new DataView(buffer), () => {});
+            await downloadFile(filePath, url, refererUrl, contentLength, acceptRanges);
         }
         catch (ex)
         {
@@ -282,8 +268,20 @@ async function handleUrl(url, refererUrl, deep)
         urls.push({ url, refererUrl, deep: (deep - 1) });
         totalCount++;
     }
+}
 
-    return fetched;
+async function downloadFile(filePath, url, refererUrl, contentLength, acceptRanges)
+{
+    let segmentSizeMax = (acceptRanges === 'bytes') ? (10 * 1024 * 1024) : contentLength; // 10 MB segments max
+    for (let offset = 0; offset < contentLength; offset += segmentSizeMax)
+    {
+        const remainingSize = contentLength - offset;
+        const segmentSize = (remainingSize < segmentSizeMax) ? remainingSize : segmentSizeMax;
+        const headers = getHeaders(url, refererUrl, offset, (offset + segmentSize - 1));
+        const response = await fetch(url, { method:'GET', headers });
+        const buffer = await response.arrayBuffer();
+        await fs.writeFile(filePath, new DataView(buffer), { flag:'a+' });
+    }
 }
 
 function urlToPath(url)
@@ -328,7 +326,7 @@ function fileExists(filePath)
     return fs.stat(filePath).then(() => true).catch(() => false);
 }
 
-function getHeaders(url, refererUrl)
+function getHeaders(url, refererUrl, rangeStartOffset = null, rangeEndOffset = null)
 {
     const host = url.replace(/^(https?:\/\/)?(.+?)(\/.*)?$/i, '$2');
     const referer = refererUrl ? refererUrl.replace(/^(https?:\/\/)?(.+?)(\/.*)?$/i, '$1$2/') : '';
@@ -348,5 +346,9 @@ function getHeaders(url, refererUrl)
         'Upgrade-Insecure-Requests': 1,
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101 Firefox/108.0'
     };
+    if (rangeStartOffset != null && rangeEndOffset != null)
+    {
+        headers.Range = `bytes=${rangeStartOffset}-${rangeEndOffset}`;
+    }
     return headers;
 }
