@@ -28,6 +28,7 @@ const delay = parseInt(args[6] ?? 500);
 const allowOutside = (args[7] == "true");
 
 const verbose = (process.env.WEBSCRAPER_VERBOSE != null) ? /^\s*true\s*$/i.test(process.env.WEBSCRAPER_VERBOSE) : true;
+const segmentsSizeMax = (process.env.WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE != null) ? parseInt(process.env.WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE) : (10 * 1024 * 1024);
 
 log("Settings:", { initialUrl, downloadRegExp, excludeRegExp, minSize, maxSize, deep, delay, allowOutside, verbose });
 
@@ -272,12 +273,12 @@ async function handleUrl(url, refererUrl, deep)
 
 async function downloadFile(filePath, url, refererUrl, contentLength, acceptRanges)
 {
-    let segmentSizeMax = (acceptRanges === 'bytes') ? (10 * 1024 * 1024) : contentLength; // 10 MB segments max
-    for (let offset = 0; offset < contentLength; offset += segmentSizeMax)
+    const segmentsSize = (acceptRanges === 'bytes') ? segmentsSizeMax : contentLength; // 10 MB segments max
+    for (let offset = 0; offset < contentLength; offset += segmentsSize)
     {
         const remainingSize = contentLength - offset;
-        const segmentSize = (remainingSize < segmentSizeMax) ? remainingSize : segmentSizeMax;
-        const headers = getHeaders(url, refererUrl, offset, (offset + segmentSize - 1));
+        const partSize = (remainingSize < segmentsSize) ? remainingSize : segmentsSize;
+        const headers = getHeaders(url, refererUrl, offset, (offset + partSize - 1));
         const response = await fetch(url, { method:'GET', headers });
         const buffer = await response.arrayBuffer();
         await fs.writeFile(filePath, new DataView(buffer), { flag:'a+' });

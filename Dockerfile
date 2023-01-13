@@ -5,9 +5,10 @@ LABEL maintainer.email="ant.lafarge@gmail.com"
 LABEL maintainer.github="https://github.com/antlafarge"
 LABEL maintainer.dockerhub="https://hub.docker.com/u/antlafarge"
 
-RUN npm isntall -g npm
-
 ENV WEBSCRAPER_VERBOSE='false'
+ENV WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE='10485760'
+
+RUN npm isntall -g npm
 
 WORKDIR /usr/src/app
 

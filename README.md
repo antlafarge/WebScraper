@@ -34,7 +34,8 @@ docker logs --follow --tail 100 wsp
 
 ## Environment variables
 
-- WEBSCRAPER_VERBOSE : `true` or `false`
+- `WEBSCRAPER_VERBOSE` : `true` or `false` (default `false` in docker image, default `true` in script without env variable set)
+- `WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE` : max segments size for downloading big files and when server supports ranges (default `10485760` for 10 MBytes)
 
 # Install Node.js
 
