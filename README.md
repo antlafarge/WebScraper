@@ -12,6 +12,12 @@ The scraper will search for links in these html tags :
 node main.js "<url>" "<downloadRegExp>" "<excludeRegExp>" <minSize> <maxSize> <deep> <delay> "<allowOutside>"
 ```
 
+Docker Example
+```bash
+docker run -d --rm -v "/mnt/hdd/downloads/:/usr/src/app/downloads/" --name wsp antlafarge/webscraper "http://www.example.com/" "" "" 0 0 0 500 "false"
+```
+*Omit the `--rm` option to follow the logs by using `docker logs --follow --tail 100 wsp`*
+
 Example
 ```bash
 # Simple
@@ -53,7 +59,7 @@ sudo apt update && sudo apt install -y nodejs npm
 
 ```
 docker build --rm -t webscraper .
-docker run -d --rm -v "$PWD/downloads/":/usr/src/app/downloads/ --name wsp webscraper "http://www.example.com/" "" "" 0 0 0 500 "false"
+docker run -d --rm -v "/mnt/hdd/downloads/:/usr/src/app/downloads/" --name wsp webscraper "http://www.example.com/" "" "" 0 0 0 500 "false"
 ```
 *Omit the `--rm` option to follow the logs by using `docker logs --follow --tail 100 wsp`*
 
@@ -103,4 +109,10 @@ npm init -y
 npm install --save jsdom node-fetch
 npm install --save
 node main.js
+```
+
+# Build dockerhub image
+
+```
+docker buildx build --platform linux/amd64,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/s390x -t antlafarge/webscraper:latest -f Dockerfile --push .
 ```

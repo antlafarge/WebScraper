@@ -16,7 +16,7 @@ import fetch from 'node-fetch'
 import jsdom from 'jsdom';
 const { JSDOM } = jsdom;
 
-var args = process.argv.slice(2);
+var args = process.argv.slice(2).filter(v => v && v.length);
 
 const initialUrl = args[0];
 const downloadRegExp = (args[1] ?? "");
@@ -30,7 +30,7 @@ const allowOutside = (args[7] == "true");
 const verbose = (process.env.WEBSCRAPER_VERBOSE != null) ? /^\s*true\s*$/i.test(process.env.WEBSCRAPER_VERBOSE) : true;
 const segmentsSizeMax = (process.env.WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE != null) ? parseInt(process.env.WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE) : (10 * 1024 * 1024);
 
-log("Settings:", { initialUrl, downloadRegExp, excludeRegExp, minSize, maxSize, deep, delay, allowOutside, verbose });
+log("Settings:", { initialUrl, downloadRegExp, excludeRegExp, minSize, maxSize, deep, delay, allowOutside, verbose, segmentsSizeMax });
 
 if (typeof(initialUrl) !== 'string' || ! /^http/i.test(initialUrl))
 {
