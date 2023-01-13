@@ -10,11 +10,13 @@ The scraper will search for links in these html tags :
 
 ```
 node main.js "<url>" "<downloadRegExp>" "<excludeRegExp>" <minSize> <maxSize> <deep> <delay> "<allowOutside>"
+
+docker run -d --rm -v "<downloadsDirectory>:/usr/src/app/downloads/" --name wsp antlafarge/webscraper "<url>" "<downloadRegExp>" "<excludeRegExp>" <minSize> <maxSize> <deep> <delay> "<allowOutside>"
 ```
 
 Docker Example
 ```bash
-docker run -d --rm -v "/mnt/hdd/downloads/:/usr/src/app/downloads/" --name wsp antlafarge/webscraper "http://www.example.com/" "" "" 0 0 0 500 "false"
+docker run -d --rm -v "/mnt/hdd/downloads/:/usr/src/app/downloads/" --name wsp antlafarge/webscraper "http://www.example.com/" "\.jpg$" "" 0 0 0 500 "false"
 ```
 *Omit the `--rm` option to follow the logs by using `docker logs --follow --tail 100 wsp`*
 
