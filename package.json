@@ -1,0 +1,25 @@
+{
+  "name": "web-scraper",
+  "version": "0.1.0",
+  "description": "WebScraper",
+  "main": "main.js",
+  "scripts": {
+    "test": "node main.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "jsdom": "^20.0.3",
+    "node-fetch": "^3.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/antlafarge/WebScraper.git"
+  },
+  "bugs": {
+    "url": "https://github.com/antlafarge/WebScraper/issues"
+  },
+  "homepage": "https://github.com/antlafarge/WebScraper#readme"
+}
