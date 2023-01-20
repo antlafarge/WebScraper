@@ -24,10 +24,11 @@ const additionalHeaders = JSON.parse(args[8] ?? "{}");
 
 const logLevel = Logger.LogLevel[process.env.WEBSCRAPER_LOG_LEVEL] ?? Logger.LogLevel.TRACE;
 const segmentsSizeMax = (process.env.WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE != null) ? parseInt(process.env.WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE) : (10 * 1024 * 1024);
+const replaceDifferentSizeFiles = /\s*true\s*/i.test(process.env.WEBSCRAPER_REPLACE_DIFFERENT_SIZE_FILES);
 
 const logger = new Logger(logLevel);
 
-logger.logInfo(null, 'Settings:', { url: initialUrl, downloadRegExp, excludeRegExp, minSize, maxSize, deep, delay, allowOutside, additionalHeaders, logLevel: (process.env.WEBSCRAPER_LOG_LEVEL ?? 'TRACE'), segmentsSizeMax });
+logger.logInfo(null, 'Settings:', { url: initialUrl, downloadRegExp, excludeRegExp, minSize, maxSize, deep, delay, allowOutside, additionalHeaders, WEBSCRAPER_LOG_LEVEL: (process.env.WEBSCRAPER_LOG_LEVEL ?? 'TRACE'), WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE: segmentsSizeMax, WEBSCRAPER_REPLACE_DIFFERENT_SIZE_FILES: replaceDifferentSizeFiles });
 
 if (typeof(initialUrl) !== 'string' || ! /^http/i.test(initialUrl))
 {
@@ -223,9 +224,19 @@ async function handleUrl(url, refererUrl, deep)
         return;
     }
     
-    if (canDownloadFile && await fileExists(filePath))
+    const stats = await fileStats(filePath);
+    if (canDownloadFile && stats != null) // If file exists
     {
-        canDownloadFile = false;
+        if (! replaceDifferentSizeFiles || contentLength == stats.size) // If we don't replace files or the size is equal
+        {
+            canDownloadFile = false;
+        }
+        else
+        {
+            // Delete the file which will be re-downloaded
+            logger.logDebug(`\tDelete file "${filePath}"`);
+            await fs.unlink(filePath);
+        }
     }
 
     if (canDownloadFile)
@@ -329,6 +340,7 @@ async function downloadFile(filePath, url, refererUrl, contentLength, acceptRang
     const timeUnitsEnabled = [false, true, true, true, true];
     const timeoutDelay = 10 * 60 * 1000;
     let minDownloadSpeedStrLength = 1;
+    let downloadSpeedsCount = 0;
 
     // display progress function
     const displayProgress = (offset, remainingSize, forceDisplayProgress, displayDownloadSpeed, displayTimeLeft) =>
@@ -347,6 +359,7 @@ async function downloadFile(filePath, url, refererUrl, contentLength, acceptRang
         if (currentDownloadSpeed > 0)
         {
             downloadSpeeds.unshift(currentDownloadSpeed);
+            downloadSpeedsCount++;
         }
         const downloadSpeedAvg = arrayAverage(downloadSpeeds) ?? 0;
 
@@ -398,10 +411,12 @@ async function downloadFile(filePath, url, refererUrl, contentLength, acceptRang
             tLastProgressDisplayed = t2;
             
             // Reduce downloads speeds kept for average computing
-            if (downloadSpeeds.length > 3)
+            const downloadSpeedsCountToKeep = Math.min(9 * downloadSpeedsCount, 100);
+            if (downloadSpeeds.length > downloadSpeedsCountToKeep)
             {
-                downloadSpeeds.length = Math.max(Math.floor((downloadSpeeds.length + 1) / 2), 3);
+                downloadSpeeds.length = downloadSpeedsCountToKeep;
             }
+            downloadSpeedsCount = 0;
         }
     };
 
@@ -425,7 +440,12 @@ async function downloadFile(filePath, url, refererUrl, contentLength, acceptRang
 
 function urlToPath(url)
 {
-    return decodeURIComponent("./downloads/" + url.trim().replace(/^https?:\/\//i, "").replace(/\\/g, "/").replace(/[:*?"<>|]/g, " ").trim());
+    return './downloads/' + decodeURIComponent(url).replace(/^(.+):\/\//i, '').replace(/[:*?"<>|]/g, ' ').replace(/\s{2,}/g, ' ').replace(/\s*(\\|\/)+\s*/g, '/').trim();
+}
+
+function fileStats(filePath, options)
+{
+    return fs.stat(filePath, options).then((stats) => stats).catch(() => null);
 }
 
 async function createOutputDirs(filePath)
@@ -433,16 +453,12 @@ async function createOutputDirs(filePath)
     const dirs = filePath.split('/');
     dirs.pop();
     const dirPath = dirs.join('/');
-    if (! await fileExists(dirPath))
+    const stats = await fileStats(dirPath);
+    if (stats == null) // if dir doesn't exist
     {
         logger.logDebug(null, `\tmkdir "${dirPath}"`);
         await fs.mkdir(dirPath, { recursive: true });
     }
-}
-
-function fileExists(filePath)
-{
-    return fs.stat(filePath).then(() => true).catch(() => false);
 }
 
 function getHeaders(url, refererUrl, supportSegments = false, rangeStartOffset = null, rangeEndOffset = null)

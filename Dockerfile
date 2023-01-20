@@ -7,6 +7,7 @@ LABEL maintainer.dockerhub="https://hub.docker.com/u/antlafarge"
 
 ENV WEBSCRAPER_LOG_LEVEL="DEBUG"
 ENV WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE="10485760"
+ENV WEBSCRAPER_REPLACE_DIFFERENT_SIZE_FILES="false"
 
 WORKDIR /usr/src/app
 

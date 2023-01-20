@@ -66,15 +66,16 @@ docker logs --follow --tail 100 wsp
 
 # Environment variables
 
-- `WEBSCRAPER_LOG_LEVEL` : Logs level. (default `DEBUG` in Dockerfile).
-    - `TRACE` : Display all logs
-    - `DEBUG` : Display error, warning, essential and progress logs only
-    - `INFO` : Display error, warning and essential logs only
-    - `WARN` : Display error and waning logs only
-    - `ERROR` : Display error logs only
-    - `TTY_ONLY` : Display temporary logs on TTY only
-    - `NO_LOGS` : Display no logs
+- `WEBSCRAPER_LOG_LEVEL` : Logs level (default `DEBUG` in Dockerfile).
+    - `TRACE` : Display all logs.
+    - `DEBUG` : Display error, warning, essential and progress logs only.
+    - `INFO` : Display error, warning and essential logs only.
+    - `WARN` : Display error and waning logs only.
+    - `ERROR` : Display error logs only.
+    - `TTY_ONLY` : Display temporary logs on TTY only.
+    - `NO_LOGS` : Display no logs.
 - `WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE` : Max segments size (in bytes) for downloading big files when http server supports ranges (default `10485760` for 10 MBytes).
+- `WEBSCRAPER_REPLACE_DIFFERENT_SIZE_FILES` : Allow files to be delated and replaced when file size is different (default is `"false"`).
 
 # Install Node.js
 
