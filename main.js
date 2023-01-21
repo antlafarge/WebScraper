@@ -1,5 +1,5 @@
 // Script which download recursively many resources from websites
-// Usage : main.js "<url>" "<downloadExtensionsRegExp>" "<excludeExtensionsRegExp>" <minSize> <maxSize> <deep> <delay> "<allowOutside>" "<additionalHeadersJSON>"
+// Usage : main.js "<url>" "<downloadRegExp>" "<excludeRegExp>" <minSize> <maxSize> <deep> <delay> "<sameOrigin>" "<additionalHeadersJSON>"
 
 import { performance } from "perf_hooks";
 import fs from 'fs/promises';
@@ -19,7 +19,7 @@ const minSize = parseInt(args[3] ?? 0);
 const maxSize = parseInt(args[4] ?? 0);
 const deep = parseInt(args[5] ?? 0);
 const delay = parseInt(args[6] ?? 200);
-const allowOutside = (args[7] == "false");
+const sameOrigin = (args[7] == "true");
 const additionalHeaders = JSON.parse(args[8] ?? "{}");
 
 const logLevel = Logger.LogLevel[process.env.WEBSCRAPER_LOG_LEVEL] ?? Logger.LogLevel.TRACE;
@@ -28,7 +28,7 @@ const replaceDifferentSizeFiles = /\s*true\s*/i.test(process.env.WEBSCRAPER_REPL
 
 const logger = new Logger(logLevel);
 
-logger.logInfo(null, 'Settings:', { url: initialUrl, downloadRegExp, excludeRegExp, minSize, maxSize, deep, delay, allowOutside, additionalHeaders, WEBSCRAPER_LOG_LEVEL: (process.env.WEBSCRAPER_LOG_LEVEL ?? 'TRACE'), WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE: segmentsSizeMax, WEBSCRAPER_REPLACE_DIFFERENT_SIZE_FILES: replaceDifferentSizeFiles });
+logger.logInfo(null, 'Settings:', { url: initialUrl, downloadRegExp, excludeRegExp, minSize, maxSize, deep, delay, sameOrigin, additionalHeaders, WEBSCRAPER_LOG_LEVEL: (process.env.WEBSCRAPER_LOG_LEVEL ?? 'TRACE'), WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE: segmentsSizeMax, WEBSCRAPER_REPLACE_DIFFERENT_SIZE_FILES: replaceDifferentSizeFiles });
 
 if (typeof(initialUrl) !== 'string' || ! /^http/i.test(initialUrl))
 {
@@ -43,8 +43,8 @@ let scrapCount = 0;
 let totalCount = 0;
 let downloadCount = 0;
 
-const downloadRE = downloadRegExp.length ? new RegExp(downloadRegExp, 'i') : /./;
-const excludeRE = excludeRegExp.length ? new RegExp(excludeRegExp, 'i') : /a^/;
+const downloadRE = (downloadRegExp.length > 0) ? new RegExp(downloadRegExp, 'i') : /./;
+const excludeRE = (excludeRegExp.length > 0) ? new RegExp(excludeRegExp, 'i') : /a^/;
 
 async function main()
 {
@@ -83,8 +83,6 @@ async function scrap({ url, refererUrl, deep })
 
                 const newUrl = getUrl(fileUrl, url, baseUrl);
     
-                logger.logDebug(null, `\tHandle [${deep}] "${newUrl}"`);
-
                 await handleUrl(newUrl, url, deep);
     
                 await sleep(delay);
@@ -124,7 +122,7 @@ function scrapNext()
 
 function canScrap(url)
 {
-    return (seenUrls[url] === undefined && (allowOutside || url.startsWith(baseUrl)));
+    return (seenUrls[url] === undefined && ((! sameOrigin) || url.startsWith(baseUrl)));
 }
 
 function getUrl(url, pageUrl)
@@ -171,6 +169,8 @@ function getUrl(url, pageUrl)
 
 async function handleUrl(url, refererUrl, deep)
 {
+    logger.logDebug(null, `\tHandle [${deep}] "${url}"`);
+
     let filePath = urlToPath(url);
 
     if (/.+\/$/.test(url))
@@ -180,14 +180,24 @@ async function handleUrl(url, refererUrl, deep)
     
     let canDownloadFile = true;
 
-    if (canDownloadFile && ! allowOutside && ! url.startsWith(url))
+    if (canDownloadFile && sameOrigin && ! url.startsWith(baseUrl))
     {
+        logger.logDebug(`\tSkip file (Not same origin))`);
         canDownloadFile = false;
     }
 
-    if (canDownloadFile && (! downloadRE.test(url) || excludeRE.test(url)))
+    if (canDownloadFile)
     {
-        canDownloadFile = false;
+        if (! downloadRE.test(url))
+        {
+            logger.logDebug(`\tSkip file (No match download regular expression)`);
+            canDownloadFile = false;
+        }
+        else if (excludeRE.test(url))
+        {
+            logger.logDebug(`\tSkip file (Match exclude regular expression)`);
+            canDownloadFile = false;
+        }
     }
 
     let extTmp = url.match(/.+\.([A-Z0-9]+)[^\/]*$/i);
@@ -215,6 +225,7 @@ async function handleUrl(url, refererUrl, deep)
 
         if (canDownloadFile && contentLength != null && ((minSize > 0 && contentLength < minSize) || (maxSize > 0 && contentLength > maxSize)))
         {
+            logger.logDebug(`\tSkip file (outside of size range)`);
             canDownloadFile = false;
         }
     }
@@ -229,12 +240,13 @@ async function handleUrl(url, refererUrl, deep)
     {
         if (! replaceDifferentSizeFiles || contentLength == stats.size) // If we don't replace files or the size is equal
         {
+            logger.logDebug(`\tSkip file (File already exists)`);
             canDownloadFile = false;
         }
         else
         {
             // Delete the file which will be re-downloaded
-            logger.logDebug(`\tDelete file "${filePath}"`);
+            logger.logDebug(`\tReplace file`);
             await fs.unlink(filePath);
         }
     }

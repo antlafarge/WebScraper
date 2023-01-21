@@ -9,10 +9,35 @@ The scraper will search for links in these html tags :
 - `<source src=".." />`
 
 ```bash
-docker run -v "<downloadsDirectory>:/usr/src/app/downloads/" -e "WEBSCRAPER_LOG_LEVEL=DEBUG" --name wsp antlafarge/webscraper "<url>" "<downloadRegExp>" "<excludeRegExp>" <minSize> <maxSize> <deep> <delay> "<allowOutside>" "<additionalHeaders>"
+docker run -v "<downloadsDirectory>:/usr/src/app/downloads/" -e "WEBSCRAPER_LOG_LEVEL=DEBUG" --name wsp antlafarge/webscraper "<url>" "<downloadRegExp>" "<excludeRegExp>" <minSize> <maxSize> <deep> <delay> "<sameOrigin>" "<additionalHeaders>"
 
-node main.js "<url>" "<downloadRegExp>" "<excludeRegExp>" <minSize> <maxSize> <deep> <delay> "<allowOutside>" "<additionalHeaders>"
+node main.js "<url>" "<downloadRegExp>" "<excludeRegExp>" <minSize> <maxSize> <deep> <delay> "<sameOrigin>" "<additionalHeaders>"
 ```
+
+## Parameters
+
+- `url` : Url to start scraping (mandatory).
+- `downloadRegExp` : File urls to download must match this regular expression (default is `.` to match all).
+- `excludeRexExp` : Fiel urls to download must not match this regular expression (default is `a^` to match nothing).
+- `minSize` : Files to download must be more than this size (default is `0` to ignore).
+- `maxSize` : Files to download must be less than this size (default is `0` to ignore).
+- `deep` : How many links to follow and parse from the original url (default is `0` to parse the first page only).
+- `delay` : Delay between two successive http requests (default is `200` to wait 200 ms).
+- `sameOrigin` : File urls to download must have the same origin as the orifinal url (default is `true`).
+- `additionalHeaders` : Additional headers to add on every HTTP requets headers in JSON format (default is `{}`).
+
+## Environment variables
+
+- `WEBSCRAPER_LOG_LEVEL` : Logs level (default `DEBUG` in Dockerfile).
+    - `TRACE` : Display all logs.
+    - `DEBUG` : Display error, warning, essential and progress logs only.
+    - `INFO` : Display error, warning and essential logs only.
+    - `WARN` : Display error and waning logs only.
+    - `ERROR` : Display error logs only.
+    - `TTY_ONLY` : Display temporary logs on TTY only.
+    - `NO_LOGS` : Display no logs.
+- `WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE` : Max segments size (in bytes) for downloading big files when http server supports ranges (default `10485760` for 10 MBytes).
+- `WEBSCRAPER_REPLACE_DIFFERENT_SIZE_FILES` : Allow files to be delated and replaced when file size is different (default is `"false"`).
 
 # Examples
 
@@ -63,19 +88,6 @@ docker logs --follow --tail 100 wsp
 [`Date`] Scrap [`8th out of 9 documents` | `3 urls awaiting analysis` | `Recurse 1 time from this document` ] "`Parsed page url`"  
 [`Date`] &nbsp;&nbsp;&nbsp;&nbsp; Handle [`Recurse 1 time from this url`] "`Handle file url`"  
 [`Date`] &nbsp;&nbsp;&nbsp;&nbsp; Download [`Downloads count`] "`Download file url`"
-
-# Environment variables
-
-- `WEBSCRAPER_LOG_LEVEL` : Logs level (default `DEBUG` in Dockerfile).
-    - `TRACE` : Display all logs.
-    - `DEBUG` : Display error, warning, essential and progress logs only.
-    - `INFO` : Display error, warning and essential logs only.
-    - `WARN` : Display error and waning logs only.
-    - `ERROR` : Display error logs only.
-    - `TTY_ONLY` : Display temporary logs on TTY only.
-    - `NO_LOGS` : Display no logs.
-- `WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE` : Max segments size (in bytes) for downloading big files when http server supports ranges (default `10485760` for 10 MBytes).
-- `WEBSCRAPER_REPLACE_DIFFERENT_SIZE_FILES` : Allow files to be delated and replaced when file size is different (default is `"false"`).
 
 # Install Node.js
 
