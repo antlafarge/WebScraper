@@ -169,7 +169,7 @@ function getUrl(url, pageUrl)
 
 async function handleUrl(url, refererUrl, deep)
 {
-    logger.logDebug(null, `\tHandle [${deep}] "${url}"`);
+    logger.logDebug(null, `Handle [${deep}] "${url}"`);
 
     let filePath = urlToPath(url);
 
@@ -182,7 +182,7 @@ async function handleUrl(url, refererUrl, deep)
 
     if (canDownloadFile && sameOrigin && ! url.startsWith(baseUrl))
     {
-        logger.logDebug(`\tSkip file (Not same origin))`);
+        logger.logDebug(`Skip file (Not same origin))`);
         canDownloadFile = false;
     }
 
@@ -190,12 +190,12 @@ async function handleUrl(url, refererUrl, deep)
     {
         if (! downloadRE.test(url))
         {
-            logger.logDebug(`\tSkip file (No match download regular expression)`);
+            logger.logDebug(`Skip file (No match download regular expression)`);
             canDownloadFile = false;
         }
         else if (excludeRE.test(url))
         {
-            logger.logDebug(`\tSkip file (Match exclude regular expression)`);
+            logger.logDebug(`Skip file (Match exclude regular expression)`);
             canDownloadFile = false;
         }
     }
@@ -225,7 +225,7 @@ async function handleUrl(url, refererUrl, deep)
 
         if (canDownloadFile && contentLength != null && ((minSize > 0 && contentLength < minSize) || (maxSize > 0 && contentLength > maxSize)))
         {
-            logger.logDebug(`\tSkip file (outside of size range)`);
+            logger.logDebug(`Skip file (outside of size range)`);
             canDownloadFile = false;
         }
     }
@@ -240,13 +240,13 @@ async function handleUrl(url, refererUrl, deep)
     {
         if (! replaceDifferentSizeFiles || contentLength == stats.size) // If we don't replace files or the size is equal
         {
-            logger.logDebug(`\tSkip file (File already exists)`);
+            logger.logDebug(`Skip file (File already exists)`);
             canDownloadFile = false;
         }
         else
         {
             // Delete the file which will be re-downloaded
-            logger.logDebug(`\tReplace file`);
+            logger.logDebug(`Replace file`);
             await fs.unlink(filePath);
         }
     }
@@ -257,7 +257,7 @@ async function handleUrl(url, refererUrl, deep)
 
         try
         {
-            logger.logInfo(null, `\tDownload [${++downloadCount}] "${url}"`);
+            logger.logInfo(null, `Download [${++downloadCount}] "${url}"`);
             await downloadFile(filePath, url, refererUrl, contentLength, acceptRanges);
         }
         catch (error)
@@ -418,7 +418,7 @@ async function downloadFile(filePath, url, refererUrl, contentLength, acceptRang
             }
     
             // Log progress
-            logger.logDebug(null, `\t\tProgress : ${percent} % (${downloadedLengthReadableStr} / ${contentLengthReadableStr} ${sizeUnits[contentLengthUnitIndex]})${downloadSpeedReadableStrFull}${readableTimeStr}`);
+            logger.logDebug(null, `    Progress : ${percent} % (${downloadedLengthReadableStr} / ${contentLengthReadableStr} ${sizeUnits[contentLengthUnitIndex]})${downloadSpeedReadableStrFull}${readableTimeStr}`);
             
             tLastProgressDisplayed = t2;
             
@@ -468,7 +468,7 @@ async function createOutputDirs(filePath)
     const stats = await fileStats(dirPath);
     if (stats == null) // if dir doesn't exist
     {
-        logger.logDebug(null, `\tmkdir "${dirPath}"`);
+        logger.logDebug(null, `mkdir "${dirPath}"`);
         await fs.mkdir(dirPath, { recursive: true });
     }
 }
