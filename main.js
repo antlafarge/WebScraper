@@ -182,7 +182,7 @@ async function handleUrl(url, refererUrl, deep)
 
     if (canDownloadFile && sameOrigin && ! url.startsWith(baseUrl))
     {
-        logger.logDebug(`Skip file (Not same origin))`);
+        logger.logDebug(null, `Skip file (Not same origin))`);
         canDownloadFile = false;
     }
 
@@ -190,12 +190,12 @@ async function handleUrl(url, refererUrl, deep)
     {
         if (! downloadRE.test(url))
         {
-            logger.logDebug(`Skip file (No match download regular expression)`);
+            logger.logDebug(null, `Skip file (No match download regular expression)`);
             canDownloadFile = false;
         }
         else if (excludeRE.test(url))
         {
-            logger.logDebug(`Skip file (Match exclude regular expression)`);
+            logger.logDebug(null, `Skip file (Match exclude regular expression)`);
             canDownloadFile = false;
         }
     }
@@ -225,7 +225,7 @@ async function handleUrl(url, refererUrl, deep)
 
         if (canDownloadFile && contentLength != null && ((minSize > 0 && contentLength < minSize) || (maxSize > 0 && contentLength > maxSize)))
         {
-            logger.logDebug(`Skip file (outside of size range)`);
+            logger.logDebug(null, `Skip file (outside of size range)`);
             canDownloadFile = false;
         }
     }
@@ -240,13 +240,13 @@ async function handleUrl(url, refererUrl, deep)
     {
         if (! replaceDifferentSizeFiles || contentLength == stats.size) // If we don't replace files or the size is equal
         {
-            logger.logDebug(`Skip file (File already exists)`);
+            logger.logDebug(null, `Skip file (File already exists)`);
             canDownloadFile = false;
         }
         else
         {
             // Delete the file which will be re-downloaded
-            logger.logDebug(`Replace file`);
+            logger.logDebug(null, `Replace file`);
             await fs.unlink(filePath);
         }
     }
