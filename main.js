@@ -25,6 +25,8 @@ const additionalHeaders = JSON.parse(args[8] ?? "{}");
 const logLevel = Logger.LogLevel[process.env.WEBSCRAPER_LOG_LEVEL] ?? Logger.LogLevel.TRACE;
 const segmentsSizeMax = (process.env.WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE != null) ? parseInt(process.env.WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE) : (10 * 1024 * 1024);
 const replaceDifferentSizeFiles = /\s*true\s*/i.test(process.env.WEBSCRAPER_REPLACE_DIFFERENT_SIZE_FILES);
+const documentTimeout = (process.env.WEBSCRAPER_DOCUMENT_TIMEOUT != null ? parseInt(process.env.WEBSCRAPER_DOCUMENT_TIMEOUT) : 10000);
+const downloadTimeout = (process.env.WEBSCRAPER_DOWNLOAD_TIMEOUT != null ? parseInt(process.env.WEBSCRAPER_DOWNLOAD_TIMEOUT) : 100000);
 
 const logger = new Logger(logLevel);
 
@@ -63,7 +65,7 @@ async function scrap({ url, refererUrl, deep })
     try
     {
         const headers = getHeaders(url, refererUrl);
-        const response = await retrySeveralTimesTimeout(() => fetchEnsureSucceed(url, { method:'GET', headers }), 2, (10 * 1000), (error) => logger.logTrace(null, 'Fetch GET failed :', error, `"${url}"`));
+        const response = await retrySeveralTimesTimeout(() => fetchEnsureSucceed(url, { method:'GET', headers }), 2, documentTimeout, (error) => logger.logTrace(null, 'Fetch GET failed :', error, `"${url}"`));
         const document = await getDocument(response);
 
         const imageUrls = Array.from(document.querySelectorAll('img')).map(img => img.src);
@@ -208,7 +210,7 @@ async function handleUrl(url, refererUrl, deep)
     try
     {
         const headers = getHeaders(url, refererUrl);
-        const response = await retrySeveralTimesTimeout(() => fetchEnsureSucceed(url, { method:'HEAD', headers }), 2, (10 * 1000), (error) => logger.logTrace(null, 'Fetch HEAD failed :', error, `"${url}"`));
+        const response = await retrySeveralTimesTimeout(() => fetchEnsureSucceed(url, { method:'HEAD', headers }), 2, documentTimeout, (error) => logger.logTrace(null, 'Fetch HEAD failed :', error, `"${url}"`));
 
         if (ext == null)
         {
@@ -339,23 +341,23 @@ async function downloadFile(filePath, url, refererUrl, contentLength, acceptRang
 {
     // Download vars
     const supportSegments = /(^|\W)bytes(\W|$)/.test(acceptRanges);
-    const segmentsSize = supportSegments ? segmentsSizeMax : contentLength; // 10 MB segments max
+    const segmentsSize = supportSegments ? segmentsSizeMax : contentLength;
 
     // Progress vars
-    const downloadSpeeds = [];
     const [contentLengthReadable, contentLengthUnitIndex] = bytesToReadableSize(contentLength);
     const contentLengthReadableStr = contentLengthReadable.toFixed(2);
     const progressDelay = 1000;
-    let t2 = performance.now();
-    let tLastProgressDisplayed = t2;
+    const tStart = performance.now();
+    let t2 = tStart;
+    let tLastProgressDisplayed = tStart;
     let lastOffset = 0;
     const timeUnitsEnabled = [false, true, true, true, true];
-    const timeoutDelay = 10 * 60 * 1000;
+    const timeoutDelay = downloadTimeout * (segmentsSize / (10 * 1024 * 1024));
+    logger.logDebug(null, `Timeout delay = ${timeoutDelay}`);
     let minDownloadSpeedStrLength = 1;
-    let downloadSpeedsCount = 0;
 
     // display progress function
-    const displayProgress = (offset, remainingSize, forceDisplayProgress, displayDownloadSpeed, displayTimeLeft) =>
+    const displayProgress = (offset, remainingSize, forceDisplayProgress, displayDownloadSpeed) =>
     {
         const t1 = t2;
         t2 = performance.now();
@@ -367,13 +369,7 @@ async function downloadFile(filePath, url, refererUrl, contentLength, acceptRang
 
         const lastSegmentSize = offset - lastOffset;
         lastOffset = offset;
-        const currentDownloadSpeed = lastSegmentSize / secondsElapsed;
-        if (currentDownloadSpeed > 0)
-        {
-            downloadSpeeds.unshift(currentDownloadSpeed);
-            downloadSpeedsCount++;
-        }
-        const downloadSpeedAvg = arrayAverage(downloadSpeeds) ?? 0;
+        const downloadSpeed = lastSegmentSize / secondsElapsed;
 
         if (progress)
         {
@@ -388,7 +384,7 @@ async function downloadFile(filePath, url, refererUrl, contentLength, acceptRang
             let downloadSpeedReadableStrFull = '';
             if (displayDownloadSpeed)
             {
-                const [downloadSpeedReadable, downloadSpeedUnitIndex] = bytesToReadableSize(downloadSpeedAvg);
+                const [downloadSpeedReadable, downloadSpeedUnitIndex] = bytesToReadableSize(downloadSpeed);
                 let downloadSpeedReadableStr = downloadSpeedReadable.toFixed(2);
                 if (minDownloadSpeedStrLength < downloadSpeedReadableStr.length)
                 {
@@ -403,13 +399,10 @@ async function downloadFile(filePath, url, refererUrl, contentLength, acceptRang
             
             // Compute time left readable str
             let readableTimeStr = '';
-            if (displayTimeLeft)
+            if (offset > 0 && remainingSize > 0)
             {
-                let remainingTime = 0;
-                if (downloadSpeedAvg > 0)
-                {
-                    remainingTime = 1000 * (remainingSize / downloadSpeedAvg);
-                }
+                const totalElapsedTime = t2 - tStart;
+                const remainingTime = totalElapsedTime * (contentLength / offset);
                 readableTimeStr = readableTimeToString(timeMsToReadableTime(remainingTime), timeUnitsEnabled);
                 if (readableTimeStr.length > 0)
                 {
@@ -421,24 +414,16 @@ async function downloadFile(filePath, url, refererUrl, contentLength, acceptRang
             logger.logDebug(null, `    Progress : ${percent} % (${downloadedLengthReadableStr} / ${contentLengthReadableStr} ${sizeUnits[contentLengthUnitIndex]})${downloadSpeedReadableStrFull}${readableTimeStr}`);
             
             tLastProgressDisplayed = t2;
-            
-            // Reduce downloads speeds kept for average computing
-            const downloadSpeedsCountToKeep = Math.min(9 * downloadSpeedsCount, 100);
-            if (downloadSpeeds.length > downloadSpeedsCountToKeep)
-            {
-                downloadSpeeds.length = downloadSpeedsCountToKeep;
-            }
-            downloadSpeedsCount = 0;
         }
     };
 
-    displayProgress(0, contentLength, true, false, false);
+    displayProgress(0, contentLength, true, false);
 
     for (let offset = 0; offset < contentLength; offset += segmentsSize)
     {
         const remainingSize = contentLength - offset;
 
-        displayProgress(offset, remainingSize, false, true, true);
+        displayProgress(offset, remainingSize, false, true);
 
         const currentSegmentSize = (remainingSize < segmentsSize) ? remainingSize : segmentsSize;
         const headers = getHeaders(url, refererUrl, supportSegments, offset, (offset + currentSegmentSize - 1));
@@ -447,7 +432,7 @@ async function downloadFile(filePath, url, refererUrl, contentLength, acceptRang
         await fs.writeFile(filePath, new DataView(buffer), { flag:'a+' });
     }
 
-    displayProgress(contentLength, contentLength, true, true, false);
+    displayProgress(contentLength, contentLength, true, true);
 }
 
 function urlToPath(url)
