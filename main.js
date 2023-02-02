@@ -402,7 +402,7 @@ async function downloadFile(filePath, url, refererUrl, contentLength, acceptRang
             if (offset > 0 && remainingSize > 0)
             {
                 const totalElapsedTime = t2 - tStart;
-                const remainingTime = totalElapsedTime * (contentLength / offset);
+                const remainingTime = totalElapsedTime * (remainingSize / offset);
                 readableTimeStr = readableTimeToString(timeMsToReadableTime(remainingTime), timeUnitsEnabled);
                 if (readableTimeStr.length > 0)
                 {
