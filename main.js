@@ -353,7 +353,6 @@ async function downloadFile(filePath, url, refererUrl, contentLength, acceptRang
     let lastOffset = 0;
     const timeUnitsEnabled = [false, true, true, true, true];
     const timeoutDelay = downloadTimeout * (segmentsSize / (10 * 1024 * 1024));
-    logger.logDebug(null, `Timeout delay = ${timeoutDelay}`);
     let minDownloadSpeedStrLength = 1;
 
     // display progress function
