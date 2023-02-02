@@ -432,7 +432,7 @@ async function downloadFile(filePath, url, refererUrl, contentLength, acceptRang
         await fs.writeFile(filePath, new DataView(buffer), { flag:'a+' });
     }
 
-    displayProgress(contentLength, contentLength, true, true);
+    displayProgress(contentLength, 0, true, true);
 }
 
 function urlToPath(url)
