@@ -17,8 +17,8 @@ node main.js "<url>" "<downloadRegExp>" "<excludeRegExp>" <minSize> <maxSize> <d
 ## Parameters
 
 - `url` : Url to start scraping (mandatory).
-- `downloadRegExp` : File urls to download must match this regular expression (default is `.` to match all).
-- `excludeRexExp` : File urls to download must not match this regular expression (default is `a^` to match nothing).
+- `downloadRegExp` : File urls to download must match this regular expression (default is `"."` to match all).
+- `excludeRexExp` : File urls to download must not match this regular expression (default is `"a^"` to match nothing).
 - `minSize` : Files to download must be more than this size (default is `0` to ignore).
 - `maxSize` : Files to download must be less than this size (default is `0` to ignore).
 - `deep` : How many links to follow and parse from the original url (default is `0` to parse the first page only).
