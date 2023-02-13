@@ -88,8 +88,8 @@ docker logs --follow --tail 100 wsp
 ### Explanation
 
 [`Date`] Scrap [`8th out of 9 documents` | `3 urls awaiting analysis` | `Recurse 1 time from this document` ] "`Parsed page url`"  
-[`Date`] &nbsp;&nbsp;&nbsp;&nbsp; Handle [`Recurse 1 time from this url`] "`Handle file url`"  
-[`Date`] &nbsp;&nbsp;&nbsp;&nbsp; Download [`Downloads count`] "`Download file url`"
+[`Date`] Handle [`Recurse 1 time from this url`] "`Handle file url`"  
+[`Date`] Download [`Downloads count`] "`Download file url`"
 
 # Install Node.js
 
