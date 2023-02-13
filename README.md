@@ -80,9 +80,9 @@ docker logs --follow --tail 100 wsp
 ### Logs example
 ```log
 [2022-11-25T11:35:08.000Z] Scrap [8/9|3|1] "http://www.example.com/"
-[2022-11-25T11:35:09.000Z]      Handle [1] "http://www.example.com/file.zip"
-[2022-11-25T11:35:10.000Z]      Download [1] "http://www.example.com/file.zip"
-[2022-11-25T11:35:12.000Z]              Progress :  10 % ( 10.00 / 100.00 MB) [1.00 MB/s] 1m 30s...
+[2022-11-25T11:35:09.000Z] Handle [1] "http://www.example.com/file.zip"
+[2022-11-25T11:35:10.000Z] Download [1] "http://www.example.com/file.zip"
+[2022-11-25T11:35:12.000Z]     Progress :  10 % ( 10.00 / 100.00 MB) [1.00 MB/s] 1m 30s...
 ```
 
 ### Explanation
