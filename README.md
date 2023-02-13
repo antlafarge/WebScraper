@@ -39,7 +39,7 @@ node main.js "<url>" "<downloadRegExp>" "<excludeRegExp>" <minSize> <maxSize> <d
 - `WEBSCRAPER_DOWNLOAD_SEGMENTS_SIZE` : Max segments size (in bytes) for downloading big files when http server supports ranges (default `10485760` for 10 MBytes).
 - `WEBSCRAPER_REPLACE_DIFFERENT_SIZE_FILES` : Allow files to be deleted and replaced when file size is different (default is `"false"`).
 - `WEBSCRAPER_DOCUMENT_TIMEOUT` : Override http requests timeout for getting documents (default is `10000` ms, 10 seconds)
-- `WEBSCRAPER_DOWNLOAD_TIMEOUT` : Override http requests timeout for downloading 10 MBytes (default is `100000` ms, 100 seconds, giving a miniman download speed of 0.1 MByte/s).
+- `WEBSCRAPER_DOWNLOAD_TIMEOUT` : Override http requests timeout for downloading a file segment (default is `100000` ms, 100 seconds, giving a minimal download speed of 0.1 MByte/s for 10 MB file segments).
 
 # Examples
 
