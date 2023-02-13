@@ -23,7 +23,7 @@ node main.js "<url>" "<downloadRegExp>" "<excludeRegExp>" <minSize> <maxSize> <d
 - `maxSize` : Files to download must be less than this size (default is `0` to ignore).
 - `deep` : How many links to follow and parse from the original url (default is `0` to parse the first page only).
 - `delay` : Delay between two successive http requests (default is `200` to wait 200 ms).
-- `sameOrigin` : File urls to download must have the same origin as the orifinal url (default is `true`).
+- `sameOrigin` : File urls to download must have the same origin as the orifinal url (default is `"true"`).
 - `additionalHeaders` : Additional headers to add on every HTTP requets headers in JSON format (default is `{}`).
 
 ## Environment variables
