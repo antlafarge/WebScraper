@@ -16,10 +16,10 @@ WORKDIR /usr/src/app
 RUN npm isntall -g npm
 
 COPY package.json \
-    logger.js \
-    async.js \
-    main.js \
-    ./
+     logger.js \
+     async.js \
+     main.js \
+     ./
 
 RUN npm install
 
