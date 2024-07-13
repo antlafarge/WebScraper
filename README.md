@@ -48,7 +48,7 @@ node main.js "<url>" "<downloadRegExp>" "<excludeRegExp>" <minSize> <maxSize> <d
 This example downloads from [http://www.example.com/](http://www.example.com/) every image files (*.jpg).
 
 ```bash
-docker run -v "/mnt/hdd/downloads/:/usr/src/app/downloads/" --name wsp antlafarge/webscraper "http://www.example.com/" "\.jpg$"
+docker run -v "/hdd/downloads/:/usr/src/app/downloads/" --name wsp antlafarge/webscraper "http://www.example.com/" "\.jpg$"
 ```
 
 ```bash
@@ -60,7 +60,7 @@ node main.js "http://www.example.com/" "\.jpg$"
 This example downloads from [http://www.example.com/](http://www.example.com/) every image files between 100 Bytes and 1 MByte (1024 * 1024 Bytes), exclude html files, recurse on all links 1 time, wait 200 milliseconds to fetch each file, allow to scrap urls with a different host url, and use basic http authentication in additional headers.
 
 ```bash
-docker run -d --rm -v "/mnt/hdd/downloads/:/usr/src/app/downloads/" -e "WEBSCRAPER_LOG_LEVEL=DEBUG" --name wsp antlafarge/webscraper "http://www.example.com/" "\.(jpe?g|png|webp|gif)[^\/]*$" "\.htm(l|l5)?[^\/]*$" 100 1048576 1 200 "true" "{\"Authorization\":\"Basic YWxhZGRpbjpvcGVuc2VzYW1l\"}"
+docker run -d --rm -v "/hdd/downloads/:/usr/src/app/downloads/" -e "WEBSCRAPER_LOG_LEVEL=DEBUG" --name wsp antlafarge/webscraper "http://www.example.com/" "\.(jpe?g|png|webp|gif)[^\/]*$" "\.htm(l|l5)?[^\/]*$" 100 1048576 1 200 "true" "{\"Authorization\":\"Basic YWxhZGRpbjpvcGVuc2VzYW1l\"}"
 ```
 *Add the `-d` (for detached) after `docker run` to start the script in background.*  
 *Add the `--rm` (for remove) after `docker run` to auto remove the container on termination.*
